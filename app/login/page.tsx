@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { supabaseServer, authConfig } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase';
 import { LoginForm } from '@/components/login-form';
 
 export default async function LoginPage() {
@@ -9,5 +9,5 @@ export default async function LoginPage() {
     try { const { data, error } = await supabase.auth.getUser(); authenticated = !error && !!data.user; } catch {}
   }
   if (authenticated) redirect('/offers');
-  return <LoginForm configured={!!authConfig()} />;
+  return <LoginForm />;
 }
