@@ -2,8 +2,9 @@
 
 Next.js + Supabase Auth. German/English login, protected `/offers` workspace, sign-out.
 
-The offers screen reads the Supabase `public.eski_teklifler` table using the signed-in user's session and its existing SELECT policy. Its six groups follow `lib/offer-groups.ts`, with 46 fields in the agreed order. No sample records are included. The server fetches 20 rows per page with an exact filtered count, ordered by offer number descending and ID as a stable tie-breaker. Offer numbers remain text; this is not chronological date sorting. General search covers all 46 fields, and group filters combine with AND. Typing waits 300 ms before requesting a new page, and stale responses are ignored. Values are not transformed or written back to the database.
+The offers screen loads all rows from Supabase `public.eski_teklifler` into page memory when opened or refreshed. Authenticated, RLS-protected requests retrieve batches of up to 1,000 rows with a UUID cursor, respecting lower server row limits too. Counts and IDs are checked so a failed or incomplete load cannot be mistaken for the complete dataset. A changing row count during loading requires a retry. No sample records, persistent browser storage or database writes are used.
 
+Its six groups follow `lib/offer-groups.ts`, with 46 fields in the agreed order. Each filter provides all distinct values in a searchable checkbox dropdown. Selections persist when changing the dropdown search. Selected values within one field combine with OR; different fields and the global search combine with AND. All filtering and 20-row pagination happen locally after loading. A small selection count replaces long lists of selected chips. Dropdown options render in increments of 100 while scrolling, with a keyboard-accessible Show more button. Refresh reloads the data while preserving selections. Global search strings and option lists are computed once per loaded dataset. The source values stay unchanged.
 Inspect shows all fields. New/edit/revise/copy buttons are disabled until persistent writing and revision handling are implemented; the table currently grants read access only. Database loading errors are shown explicitly, with no sample-data fallback. No additional SQL or keys are needed when the supplied import setup SQL has already been applied. Attachments and PDF generation remain separate work.
 
 ## Supabase
@@ -39,3 +40,4 @@ Check German/English switching; wrong-password message; valid account login; `/o
 Query references: https://supabase.com/docs/reference/javascript/select and https://supabase.com/docs/reference/javascript/using-filters-ilike.
 
 Auth implementation follows https://supabase.com/docs/guides/auth/server-side/creating-a-client and https://nextjs.org/docs/app/getting-started/proxy.
+

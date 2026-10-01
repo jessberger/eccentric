@@ -1,17 +1,18 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import logo from '@/pics/logo.jpg';
 import { signOut } from '@/app/actions';
-import { loadOffers } from '@/app/offers/actions';
+import { loadOfferBatch } from '@/app/offers/actions';
 import { offerFields, offerGroups } from '@/lib/offer-groups';
-import { OFFER_PAGE_SIZE, type Offer, type OfferResult } from '@/lib/offers';
+import { OFFER_PAGE_SIZE, type Offer, type OfferLoadError } from '@/lib/offers';
 import { LanguageSwitch, useLanguage } from './language';
+import { MultiSelectFilter } from './multi-select-filter';
 
 const copy = {
-  en: { search: 'Search offers…', filters: 'Filters', clear: 'Clear filters', all: 'Contains…', inspect: 'Inspect', edit: 'Edit', revise: 'Revise', copy: 'Copy', new: 'New offer', close: 'Close', count: 'offers', empty: 'No matching offers.', noData: 'No offers are available.', previous: 'Previous', next: 'Next', logout: 'Sign out', signoutError: 'Sign-out failed. Please try again.', loading: 'Loading…', retry: 'Try again', login: 'Sign in', readOnly: 'Saving will be enabled in the next step.', errors: { auth: 'Your session has expired. Please sign in again.', configuration: 'The database connection is not configured.', schema: 'The offer table or its columns could not be found.', permission: 'Your account does not have permission to read these offers.', unavailable: 'Offers could not be loaded. Please try again.', invalid: 'Please shorten your search or filter text.' } },
-  de: { search: 'Angebote suchen…', filters: 'Filter', clear: 'Filter zurücksetzen', all: 'Enthält…', inspect: 'Ansehen', edit: 'Bearbeiten', revise: 'Revidieren', copy: 'Kopieren', new: 'Neues Angebot', close: 'Schließen', count: 'Angebote', empty: 'Keine passenden Angebote.', noData: 'Keine Angebote verfügbar.', previous: 'Zurück', next: 'Weiter', logout: 'Abmelden', signoutError: 'Abmeldung fehlgeschlagen. Bitte erneut versuchen.', loading: 'Wird geladen…', retry: 'Erneut versuchen', login: 'Anmelden', readOnly: 'Speichern wird im nächsten Schritt aktiviert.', errors: { auth: 'Ihre Sitzung ist abgelaufen. Bitte erneut anmelden.', configuration: 'Die Datenbankverbindung ist nicht eingerichtet.', schema: 'Die Angebotstabelle oder ihre Spalten wurden nicht gefunden.', permission: 'Ihr Konto hat keine Leseberechtigung für diese Angebote.', unavailable: 'Angebote konnten nicht geladen werden. Bitte erneut versuchen.', invalid: 'Bitte kürzen Sie Ihren Such- oder Filtertext.' } },
+  en: { search: 'Search offers…', filters: 'Filters', clear: 'Clear filters', all: 'Contains…', inspect: 'Inspect', edit: 'Edit', revise: 'Revise', copy: 'Copy', new: 'New offer', close: 'Close', count: 'offers', empty: 'No matching offers.', noData: 'No offers are available.', previous: 'Previous', next: 'Next', logout: 'Sign out', signoutError: 'Sign-out failed. Please try again.', refresh: 'Refresh', loading: 'Loading…', retry: 'Try again', login: 'Sign in', readOnly: 'Saving will be enabled in the next step.', errors: { auth: 'Your session has expired. Please sign in again.', configuration: 'The database connection is not configured.', schema: 'The offer table or its columns could not be found.', permission: 'Your account does not have permission to read these offers.', unavailable: 'Offers could not be loaded. Please try again.', invalid: 'Please shorten your search or filter text.' } },
+  de: { search: 'Angebote suchen…', filters: 'Filter', clear: 'Filter zurücksetzen', all: 'Enthält…', inspect: 'Ansehen', edit: 'Bearbeiten', revise: 'Revidieren', copy: 'Kopieren', new: 'Neues Angebot', close: 'Schließen', count: 'Angebote', empty: 'Keine passenden Angebote.', noData: 'Keine Angebote verfügbar.', previous: 'Zurück', next: 'Weiter', logout: 'Abmelden', signoutError: 'Abmeldung fehlgeschlagen. Bitte erneut versuchen.', refresh: 'Aktualisieren', loading: 'Wird geladen…', retry: 'Erneut versuchen', login: 'Anmelden', readOnly: 'Speichern wird im nächsten Schritt aktiviert.', errors: { auth: 'Ihre Sitzung ist abgelaufen. Bitte erneut anmelden.', configuration: 'Die Datenbankverbindung ist nicht eingerichtet.', schema: 'Die Angebotstabelle oder ihre Spalten wurden nicht gefunden.', permission: 'Ihr Konto hat keine Leseberechtigung für diese Angebote.', unavailable: 'Angebote konnten nicht geladen werden. Bitte erneut versuchen.', invalid: 'Bitte kürzen Sie Ihren Such- oder Filtertext.' } },
 };
 
 function OfferDialog({ offer, onClose }: { offer: Offer; onClose: () => void }) {
@@ -44,39 +45,76 @@ function OfferDialog({ offer, onClose }: { offer: Offer; onClose: () => void }) 
   </dialog>;
 }
 
-export function Workspace({ email, initialResult }: { email: string; initialResult: OfferResult }) {
+export function Workspace({ email }: { email: string }) {
   const { language } = useLanguage();
   const t = copy[language];
   const [pending, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
-  const [result, setResult] = useState<OfferResult>(initialResult);
-  const [loading, setLoading] = useState(false);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [error, setError] = useState<OfferLoadError | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState({ loaded: 0, total: 0 });
   const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [opened, setOpened] = useState<Offer | null>(null);
   const [page, setPage] = useState(1);
   const [retry, setRetry] = useState(0);
-  const requestKey = JSON.stringify({ query, filters, page, retry });
-  const settledKey = useRef(requestKey);
-  const activeFilters = Object.entries(filters).filter(([, value]) => value.trim());
+  const activeFilters = Object.entries(filters).filter(([, values]) => values.length > 0);
   const group = offerGroups.find(value => value.id === activeGroup);
-  const pageCount = Math.max(1, Math.ceil(result.count / OFFER_PAGE_SIZE));
 
   useEffect(() => {
-    if (requestKey === settledKey.current) { setLoading(false); return; }
     let cancelled = false;
-    setLoading(true);
-    const timer = setTimeout(async () => {
-      let response: OfferResult;
-      try { response = await loadOffers({ query, filters, page }); }
-      catch { response = { offers: [], count: 0, error: 'unavailable' }; }
-      if (!cancelled) { settledKey.current = requestKey; setResult(response); setLoading(false); }
-    }, 300);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [requestKey, query, filters, page]);
+    setLoading(true); setError(null); setOffers([]); setOpened(null);
+    setProgress({ loaded: 0, total: 0 }); setPage(1);
+    async function loadAll() {
+      const collected: Offer[] = [];
+      const ids = new Set<string>();
+      let cursor: string | null = null;
+      let expected: number | null = null;
+      try {
+        do {
+          const batch = await loadOfferBatch(cursor);
+          if (cancelled) return;
+          if (batch.error) { setError(batch.error); setLoading(false); return; }
+          if (expected === null) expected = batch.remaining;
+          // Never publish an incomplete cache if the dataset changes during loading.
+          if (collected.length + batch.remaining !== expected) throw new Error('Dataset changed');
+          for (const offer of batch.offers) {
+            if (ids.has(offer.id)) throw new Error('Duplicate batch');
+            ids.add(offer.id); collected.push(offer);
+          }
+          if (batch.nextCursor && batch.nextCursor === cursor) throw new Error('Cursor did not advance');
+          cursor = batch.nextCursor;
+          setProgress({ loaded: collected.length, total: expected });
+        } while (cursor);
+        if (collected.length !== expected) throw new Error('Incomplete dataset');
+        const numberOrder = new Intl.Collator('en', { numeric: true });
+        collected.sort((a,b) => {
+          const left = a.values.offer_no || ''; const right = b.values.offer_no || '';
+          return numberOrder.compare(right, left) || a.id.localeCompare(b.id);
+        });
+        if (!cancelled) { setOffers(collected); setLoading(false); }
+      } catch { if (!cancelled) { setError('unavailable'); setLoading(false); } }
+    }
+    void loadAll();
+    return () => { cancelled = true; };
+  }, [retry]);
 
-  function updateFilter(key: string, value: string) { setFilters(previous => ({ ...previous, [key]: value })); setPage(1); }
+  const options = useMemo(() => {
+    const order = new Intl.Collator(language, { numeric: true });
+    return Object.fromEntries(offerFields.map(field => [field.key, Array.from(new Set(offers.map(offer => offer.values[field.key] ?? ''))).sort(order.compare)]));
+  }, [offers, language]);
+  const indexed = useMemo(() => offers.map(offer => ({ offer, text: Object.values(offer.values).join(' ').toLocaleLowerCase() })), [offers]);
+  const filtered = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase();
+    const selections = Object.entries(filters).filter(([, values]) => values.length > 0).map(([key, values]) => ({ key, values: new Set(values) }));
+    return indexed.filter(({ offer, text }) => (!term || text.includes(term)) && selections.every(({ key, values }) => values.has(offer.values[key] ?? ''))).map(({ offer }) => offer);
+  }, [indexed, query, filters]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / OFFER_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visible = filtered.slice((currentPage - 1) * OFFER_PAGE_SIZE, currentPage * OFFER_PAGE_SIZE);
+  function updateFilter(key: string, values: string[]) { setFilters(previous => ({ ...previous, [key]: values })); setPage(1); }
   function resetFilters() { setFilters({}); setQuery(''); setPage(1); }
 
   return <div className="workspace">
@@ -84,31 +122,32 @@ export function Workspace({ email, initialResult }: { email: string; initialResu
     <main className="offers-main">
       {failed && <p role="alert" className="form-error">{t.signoutError}</p>}
       <div className="offers-toolbar">
-        <label className="offer-search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><input type="search" maxLength={100} value={query} placeholder={t.search} aria-label={t.search} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>
-        <span className="offer-count" role="status">{loading ? t.loading : result.error ? '—' : `${result.count.toLocaleString(language)} ${t.count}`}</span>
+        <label className="offer-search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><input type="search" disabled={loading || !!error} maxLength={100} value={query} placeholder={t.search} aria-label={t.search} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>
+        <span className="offer-count" role="status">{loading ? `${t.loading} ${progress.loaded.toLocaleString(language)} / ${progress.total.toLocaleString(language)}` : error ? '—' : `${filtered.length.toLocaleString(language)} ${t.count}`}</span>
+        <button type="button" className="outline-button" disabled={loading} onClick={() => setRetry(value => value + 1)}>{t.refresh}</button>
         <span className="new-offer" title={t.readOnly}><button type="button" className="solid-button" disabled><span aria-hidden="true">+</span> {t.new}</button></span>
       </div>
       <section className="filter-area" aria-label={t.filters}>
         <div className="filter-groups">{offerGroups.map(item => {
-          const count = item.fields.filter(field => filters[field.key]?.trim()).length;
+          const count = item.fields.filter(field => filters[field.key]?.length).length;
           return <button key={item.id} type="button" className={`filter-group-button${activeGroup === item.id ? ' selected' : ''}`} aria-expanded={activeGroup === item.id} aria-controls={activeGroup === item.id ? `filters-${item.id}` : undefined} onClick={() => setActiveGroup(activeGroup === item.id ? null : item.id)}><span>{item[language]}</span><span className="filter-indicator">{count > 0 && <b>{count}</b>}<span aria-hidden="true">{activeGroup === item.id ? '−' : '+'}</span></span></button>;
         })}</div>
-        {group && <div className="filter-panel" id={`filters-${group.id}`}>{group.fields.map(field => <label key={field.key} htmlFor={`filter-${field.key}`}><span>{field[language]}</span><input id={`filter-${field.key}`} type="text" maxLength={160} value={filters[field.key] ?? ''} placeholder={t.all} onChange={event => updateFilter(field.key, event.target.value)} /></label>)}</div>}
-        {(activeFilters.length > 0 || query) && <div className="active-filters">{activeFilters.map(([key, value]) => <button type="button" key={key} onClick={() => updateFilter(key, '')} aria-label={`${t.clear}: ${offerFields.find(field => field.key === key)?.[language]}`}><span>{offerFields.find(field => field.key === key)?.[language]}: {value}</span><span aria-hidden="true">×</span></button>)}<button type="button" className="clear-filters" onClick={resetFilters}>{t.clear}</button></div>}
+        {group && <div className="filter-panel" id={`filters-${group.id}`}>{group.fields.map(field => <MultiSelectFilter key={field.key} label={field[language]} options={options[field.key] ?? []} selected={filters[field.key] ?? []} disabled={loading || !!error} onChange={values => updateFilter(field.key, values)} />)}</div>}
+        {(activeFilters.length > 0 || query) && <div className="active-filters"><button type="button" className="clear-filters" onClick={resetFilters}>{t.clear}</button></div>}
       </section>
       <div className="offer-list" aria-busy={loading}>
-        {loading ? <div className="offers-empty">{t.loading}</div> : result.error ? <div className="offers-empty"><p role="alert">{t.errors[result.error]}</p>{result.error === 'auth' ? <a className="outline-button" href="/login">{t.login}</a> : <button type="button" className="outline-button" onClick={() => setRetry(value => value + 1)}>{t.retry}</button>}</div> : <>
-          {result.offers.map(offer => <article className="offer-row" key={offer.id} aria-label={`${offer.values.offer_no || '—'} ${offer.values.customer_name || ''}`}>
+        {loading ? <div className="offers-empty">{t.loading}</div> : error ? <div className="offers-empty"><p role="alert">{t.errors[error]}</p>{error === 'auth' ? <a className="outline-button" href="/login">{t.login}</a> : <button type="button" className="outline-button" onClick={() => setRetry(value => value + 1)}>{t.retry}</button>}</div> : <>
+          {visible.map(offer => <article className="offer-row" key={offer.id} aria-label={`${offer.values.offer_no || '—'} ${offer.values.customer_name || ''}`}>
             <div className="offer-boxes">{offerGroups.map(item => <section className={`offer-box offer-box-${item.id}`} key={item.id}>
               <h2>{item[language]}</h2>
               <dl>{item.fields.filter(field => field.preview).map(field => <div key={field.key}><dt>{field[language]}</dt><dd>{offer.values[field.key] || '—'}</dd></div>)}</dl>
             </section>)}</div>
             <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button>{(['edit', 'revise', 'copy'] as const).map(mode => <span key={mode} title={t.readOnly}><button type="button" disabled>{t[mode]}</button></span>)}</div>
           </article>)}
-          {result.offers.length === 0 && <div className="offers-empty"><p>{query || activeFilters.length > 0 ? t.empty : t.noData}</p>{(query || activeFilters.length > 0) && <button type="button" className="outline-button" onClick={resetFilters}>{t.clear}</button>}</div>}
+          {filtered.length === 0 && <div className="offers-empty"><p>{query || activeFilters.length > 0 ? t.empty : t.noData}</p>{(query || activeFilters.length > 0) && <button type="button" className="outline-button" onClick={resetFilters}>{t.clear}</button>}</div>}
         </>}
       </div>
-      {!result.error && pageCount > 1 && <nav className="offer-pagination" aria-label={language === 'de' ? 'Seiten' : 'Pages'}><button type="button" className="outline-button" disabled={loading || page === 1} onClick={() => setPage(value => Math.max(1, value - 1))}>{t.previous}</button><span>{page} / {pageCount}</span><button type="button" className="outline-button" disabled={loading || page >= pageCount} onClick={() => setPage(value => value + 1)}>{t.next}</button></nav>}
+      {!loading && !error && pageCount > 1 && <nav className="offer-pagination" aria-label={language === 'de' ? 'Seiten' : 'Pages'}><button type="button" className="outline-button" disabled={loading || currentPage === 1} onClick={() => setPage(Math.max(1, currentPage - 1))}>{t.previous}</button><span>{currentPage} / {pageCount}</span><button type="button" className="outline-button" disabled={loading || currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>{t.next}</button></nav>}
     </main>
     {opened && <OfferDialog key={opened.id} offer={opened} onClose={() => setOpened(null)} />}
   </div>;
