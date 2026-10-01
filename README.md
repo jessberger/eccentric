@@ -1,6 +1,8 @@
 # JESSBERGER Eccentric
 
-Next.js + Supabase Auth. German/English login, protected `/offers` entry page, sign-out. The quotation editor and data import are not implemented yet.
+Next.js + Supabase Auth. German/English login, protected `/offers` workspace, sign-out.
+
+The offers screen currently uses two sample offers for design review. Its six groups follow `lib/offer-groups.ts`, with 46 fields in the agreed order. Group filters, inspection, editing, A/B/C revisions and copying work only in page memory; reloading discards changes. The imported Supabase `eski_teklifler` table is not queried or modified yet. Persistent offer storage, attachment handling and PDF generation will be implemented separately.
 
 ## Supabase
 
