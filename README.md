@@ -2,7 +2,9 @@
 
 Next.js + Supabase Auth. German/English login, protected `/offers` workspace, sign-out.
 
-The offers screen currently uses two sample offers for design review. Its six groups follow `lib/offer-groups.ts`, with 46 fields in the agreed order. Group filters, inspection, editing, A/B/C revisions and copying work only in page memory; reloading discards changes. The imported Supabase `eski_teklifler` table is not queried or modified yet. Persistent offer storage, attachment handling and PDF generation will be implemented separately.
+The offers screen reads the Supabase `public.eski_teklifler` table using the signed-in user's session and its existing SELECT policy. Its six groups follow `lib/offer-groups.ts`, with 46 fields in the agreed order. No sample records are included. The server fetches 20 rows per page with an exact filtered count, ordered by offer number descending and ID as a stable tie-breaker. Offer numbers remain text; this is not chronological date sorting. General search covers all 46 fields, and group filters combine with AND. Typing waits 300 ms before requesting a new page, and stale responses are ignored. Values are not transformed or written back to the database.
+
+Inspect shows all fields. New/edit/revise/copy buttons are disabled until persistent writing and revision handling are implemented; the table currently grants read access only. Database loading errors are shown explicitly, with no sample-data fallback. No additional SQL or keys are needed when the supplied import setup SQL has already been applied. Attachments and PDF generation remain separate work.
 
 ## Supabase
 
@@ -32,6 +34,8 @@ Language is saved in a browser cookie; no account settings page. Technical PDFs 
 
 ## Verification on the deployed site
 
-Check German/English switching; wrong-password message; valid account login; `/offers` redirect for signed-out visitors; sign-out; reload and session persistence. Live login needs configured variables and an existing Supabase user.
+Check German/English switching; wrong-password message; valid account login; `/offers` redirect for signed-out visitors; sign-out; reload and session persistence. Live login needs configured variables and an existing Supabase user. For offers, confirm the imported count (expected 5,145), inspect a record, search an offer outside the first page, combine filters from different groups, clear filters, and move between pages.
+
+Query references: https://supabase.com/docs/reference/javascript/select and https://supabase.com/docs/reference/javascript/using-filters-ilike.
 
 Auth implementation follows https://supabase.com/docs/guides/auth/server-side/creating-a-client and https://nextjs.org/docs/app/getting-started/proxy.
