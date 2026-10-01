@@ -115,3 +115,5 @@
 .option-checkbox{display:grid;place-items:center;flex:0 0 15px;width:15px;height:15px;margin-top:2px;border:1px solid #9fb5c4;border-radius:3px;font-size:12px;line-height:1;color:white}
 .multi-filter-option[aria-checked=true] .option-checkbox{background:var(--blue);border-color:var(--blue)}
 .offer-count{min-width:105px;font-variant-numeric:tabular-nums}
+
+.edit-save-error{margin:0 18px 10px;flex-shrink:0;max-height:130px;overflow:auto}

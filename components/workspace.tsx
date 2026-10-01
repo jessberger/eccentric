@@ -9,6 +9,7 @@ import { offerFields, offerGroups } from '@/lib/offer-groups';
 import { OFFER_PAGE_SIZE, type Offer, type OfferLoadError } from '@/lib/offers';
 import { LanguageSwitch, useLanguage } from './language';
 import { MultiSelectFilter } from './multi-select-filter';
+import { EditOfferDialog } from './edit-offer-dialog';
 
 const copy = {
   en: { search: 'Search offers…', filters: 'Filters', clear: 'Clear filters', all: 'Contains…', inspect: 'Inspect', edit: 'Edit', revise: 'Revise', copy: 'Copy', new: 'New offer', close: 'Close', count: 'offers', empty: 'No matching offers.', noData: 'No offers are available.', previous: 'Previous', next: 'Next', logout: 'Sign out', signoutError: 'Sign-out failed. Please try again.', refresh: 'Refresh', loading: 'Loading…', retry: 'Try again', login: 'Sign in', readOnly: 'Saving will be enabled in the next step.', errors: { auth: 'Your session has expired. Please sign in again.', configuration: 'The database connection is not configured.', schema: 'The offer table or its columns could not be found.', permission: 'Your account does not have permission to read these offers.', unavailable: 'Offers could not be loaded. Please try again.', invalid: 'Please shorten your search or filter text.' } },
@@ -58,6 +59,7 @@ export function Workspace({ email }: { email: string }) {
   const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [opened, setOpened] = useState<Offer | null>(null);
+  const [editing, setEditing] = useState<Offer | null>(null);
   const [page, setPage] = useState(1);
   const [retry, setRetry] = useState(0);
   const activeFilters = Object.entries(filters).filter(([, values]) => values.length > 0);
@@ -65,7 +67,7 @@ export function Workspace({ email }: { email: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true); setError(null); setOffers([]); setOpened(null);
+    setLoading(true); setError(null); setOffers([]); setOpened(null); setEditing(null);
     setProgress({ loaded: 0, total: 0 }); setPage(1);
     async function loadAll() {
       const collected: Offer[] = [];
@@ -116,6 +118,14 @@ export function Workspace({ email }: { email: string }) {
   const visible = filtered.slice((currentPage - 1) * OFFER_PAGE_SIZE, currentPage * OFFER_PAGE_SIZE);
   function updateFilter(key: string, values: string[]) { setFilters(previous => ({ ...previous, [key]: values })); setPage(1); }
   function resetFilters() { setFilters({}); setQuery(''); setPage(1); }
+  function applySavedOffer(saved: Offer) {
+    setOffers(previous => {
+      const updated = previous.map(offer => offer.id === saved.id ? saved : offer);
+      const order = new Intl.Collator('en', { numeric: true });
+      return updated.sort((a,b) => order.compare(b.values.offer_no || '', a.values.offer_no || '') || a.id.localeCompare(b.id));
+    });
+    setEditing(null);
+  }
 
   return <div className="workspace">
     <header className="workspace-header"><Image src={logo} alt="JESSBERGER" sizes="130px" /><div className="workspace-account"><LanguageSwitch /><span className="account-email">{email}</span><button className="text-button" disabled={pending} onClick={() => { setFailed(false); startTransition(async () => { const response = await signOut(); setFailed(response.failed); }); }}>{pending ? '…' : t.logout}</button></div></header>
@@ -142,7 +152,7 @@ export function Workspace({ email }: { email: string }) {
               <h2>{item[language]}</h2>
               <dl>{item.fields.filter(field => field.preview).map(field => <div key={field.key}><dt>{field[language]}</dt><dd>{offer.values[field.key] || '—'}</dd></div>)}</dl>
             </section>)}</div>
-            <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button>{(['edit', 'revise', 'copy'] as const).map(mode => <span key={mode} title={t.readOnly}><button type="button" disabled>{t[mode]}</button></span>)}</div>
+            <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button><button type="button" onClick={() => setEditing(offer)}>{t.edit}</button>{(['revise', 'copy'] as const).map(mode => <span key={mode} title={t.readOnly}><button type="button" disabled>{t[mode]}</button></span>)}</div>
           </article>)}
           {filtered.length === 0 && <div className="offers-empty"><p>{query || activeFilters.length > 0 ? t.empty : t.noData}</p>{(query || activeFilters.length > 0) && <button type="button" className="outline-button" onClick={resetFilters}>{t.clear}</button>}</div>}
         </>}
@@ -150,5 +160,6 @@ export function Workspace({ email }: { email: string }) {
       {!loading && !error && pageCount > 1 && <nav className="offer-pagination" aria-label={language === 'de' ? 'Seiten' : 'Pages'}><button type="button" className="outline-button" disabled={loading || currentPage === 1} onClick={() => setPage(Math.max(1, currentPage - 1))}>{t.previous}</button><span>{currentPage} / {pageCount}</span><button type="button" className="outline-button" disabled={loading || currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>{t.next}</button></nav>}
     </main>
     {opened && <OfferDialog key={opened.id} offer={opened} onClose={() => setOpened(null)} />}
+    {editing && <EditOfferDialog key={`${editing.id}-${editing.recordVersion}`} offer={editing} onClose={() => setEditing(null)} onSaved={applySavedOffer} />}
   </div>;
 }
