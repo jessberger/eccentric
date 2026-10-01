@@ -108,3 +108,10 @@
 .multi-filter-clear{display:block;width:100%;text-align:left;border:0;border-radius:3px;padding:7px 6px;background:#f2f7fa;color:#277398;font-size:12px;margin-bottom:5px}
 .multi-filter-options>p{padding:12px 6px;color:var(--muted);font-size:13px}
 @media(max-width:700px){.multi-filter-menu{width:100%;min-width:0}.offers-toolbar>.outline-button{order:2}}
+
+.filter-panel .multi-filter-option{width:100%;text-align:left;border:0;background:transparent;font-family:inherit}
+.filter-panel .multi-filter-option:hover{background:#eff7fc}
+.filter-panel .multi-filter-option[aria-checked=true]{background:#e7f3fa}
+.option-checkbox{display:grid;place-items:center;flex:0 0 15px;width:15px;height:15px;margin-top:2px;border:1px solid #9fb5c4;border-radius:3px;font-size:12px;line-height:1;color:white}
+.multi-filter-option[aria-checked=true] .option-checkbox{background:var(--blue);border-color:var(--blue)}
+.offer-count{min-width:105px;font-variant-numeric:tabular-nums}

@@ -125,6 +125,7 @@ export function Workspace({ email }: { email: string }) {
         <label className="offer-search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><input type="search" disabled={loading || !!error} maxLength={100} value={query} placeholder={t.search} aria-label={t.search} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>
         <span className="offer-count" role="status">{loading ? `${t.loading} ${progress.loaded.toLocaleString(language)} / ${progress.total.toLocaleString(language)}` : error ? '—' : `${filtered.length.toLocaleString(language)} ${t.count}`}</span>
         <button type="button" className="outline-button" disabled={loading} onClick={() => setRetry(value => value + 1)}>{t.refresh}</button>
+        <button type="button" className="outline-button" disabled={!query && activeFilters.length === 0} onClick={resetFilters}>{t.clear}</button>
         <span className="new-offer" title={t.readOnly}><button type="button" className="solid-button" disabled><span aria-hidden="true">+</span> {t.new}</button></span>
       </div>
       <section className="filter-area" aria-label={t.filters}>
@@ -133,7 +134,6 @@ export function Workspace({ email }: { email: string }) {
           return <button key={item.id} type="button" className={`filter-group-button${activeGroup === item.id ? ' selected' : ''}`} aria-expanded={activeGroup === item.id} aria-controls={activeGroup === item.id ? `filters-${item.id}` : undefined} onClick={() => setActiveGroup(activeGroup === item.id ? null : item.id)}><span>{item[language]}</span><span className="filter-indicator">{count > 0 && <b>{count}</b>}<span aria-hidden="true">{activeGroup === item.id ? '−' : '+'}</span></span></button>;
         })}</div>
         {group && <div className="filter-panel" id={`filters-${group.id}`}>{group.fields.map(field => <MultiSelectFilter key={field.key} label={field[language]} options={options[field.key] ?? []} selected={filters[field.key] ?? []} disabled={loading || !!error} onChange={values => updateFilter(field.key, values)} />)}</div>}
-        {(activeFilters.length > 0 || query) && <div className="active-filters"><button type="button" className="clear-filters" onClick={resetFilters}>{t.clear}</button></div>}
       </section>
       <div className="offer-list" aria-busy={loading}>
         {loading ? <div className="offers-empty">{t.loading}</div> : error ? <div className="offers-empty"><p role="alert">{t.errors[error]}</p>{error === 'auth' ? <a className="outline-button" href="/login">{t.login}</a> : <button type="button" className="outline-button" onClick={() => setRetry(value => value + 1)}>{t.retry}</button>}</div> : <>

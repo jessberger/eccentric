@@ -27,9 +27,9 @@ export function MultiSelectFilter({ label, options, selected, onChange, disabled
     <button ref={trigger} type="button" className="multi-filter-trigger" disabled={disabled} aria-label={label} aria-expanded={open} onClick={() => { setOpen(!open); if (!open) { setSearch(''); setLimit(100); } }}><span>{selected.length ? `${selected.length} ${de ? 'ausgewählt' : 'selected'}` : de ? 'Alle Werte' : 'All values'}</span><span aria-hidden="true">▾</span></button>
     {open && <div className="multi-filter-menu" role="group" aria-label={label}>
       <input ref={searchInput} type="search" aria-label={`${label}: ${de ? 'Optionen suchen' : 'Search options'}`} placeholder={de ? 'Suchen…' : 'Search…'} value={search} onChange={event => { setSearch(event.target.value); setLimit(100); }} />
-      {selected.length > 0 && <button type="button" className="multi-filter-clear" onClick={() => onChange([])}>{de ? 'Auswahl löschen' : 'Clear selection'}</button>}
+      <button type="button" className="multi-filter-clear" disabled={selected.length === 0} onClick={() => onChange([])}>{de ? 'Auswahl löschen' : 'Clear selection'}</button>
       <div className="multi-filter-options" onScroll={event => { const element = event.currentTarget; if (element.scrollTop + element.clientHeight >= element.scrollHeight - 40) setLimit(current => Math.min(filtered.length, current + 100)); }}>
-        {filtered.slice(0, limit).map(value => <label key={value} className="multi-filter-option"><input type="checkbox" checked={chosen.has(value)} onChange={() => toggle(value)} /><span>{value || (de ? '(Leer)' : '(Empty)')}</span></label>)}
+        {filtered.slice(0, limit).map(value => <button type="button" key={value} className="multi-filter-option" role="checkbox" aria-checked={chosen.has(value)} onClick={() => toggle(value)}><span className="option-checkbox" aria-hidden="true">{chosen.has(value) ? '✓' : ''}</span><span>{value || (de ? '(Leer)' : '(Empty)')}</span></button>)}
         {filtered.length === 0 && <p>{de ? 'Keine passenden Werte.' : 'No matching values.'}</p>}
         {limit < filtered.length && <button type="button" className="multi-filter-clear" onClick={() => setLimit(current => current + 100)}>{de ? 'Weitere anzeigen' : 'Show more'}</button>}
       </div>
