@@ -21,7 +21,7 @@ export async function loadOfferBatch(cursor: string | null = null): Promise<Offe
     const { data: auth, error: authError } = await supabase.auth.getUser();
     if (authError || !auth.user || auth.user.is_anonymous) return failure('auth');
     const columns = offerFields.map(field => field.key);
-    let request = supabase.from('eski_teklifler').select(['id', 'record_version', 'revision_index', ...columns].join(','), { count: 'exact' }).order('id', { ascending: true }).limit(1000);
+    let request = supabase.from('eski_teklifler').select(['id', 'record_version', 'revision_index', ...columns].join(','), { count: 'exact' }).eq('is_active', true).order('id', { ascending: true }).limit(1000);
     if (cursor) request = request.gt('id', cursor);
     const { data, count, error } = await request.abortSignal(AbortSignal.timeout(20000));
     if (error) {
@@ -66,11 +66,13 @@ export async function saveOffer(id: string, expectedVersion: number, changes: Re
       .update(updateValues)
       .eq('id', id)
       .eq('record_version', expectedVersion)
+      .eq('is_active', true)
       .select(['id', 'record_version', 'revision_index', ...columns].join(','))
       .maybeSingle();
 
     if (error) {
       console.error('Offer update failed:', error.code);
+      if (error.message.includes('OFFER_INACTIVE')) return { offer: null, error: 'conflict' };
       if (error.code === '23505') return { offer: null, error: 'exists' };
       if (error.message.includes('REVISION_NUMBER_FIXED')) return { offer: null, error: 'number' };
       if (error.code === '42501') return { offer: null, error: 'permission' };
@@ -85,7 +87,7 @@ export async function saveOffer(id: string, expectedVersion: number, changes: Re
 
 function revisionError(error: { code: string; message: string }): OfferSaveError {
   if (error.message.includes('AUTH_REQUIRED') || ['PGRST301', 'PGRST303'].includes(error.code)) return 'auth';
-  if (error.message.includes('SOURCE_CHANGED') || error.code === 'P0002') return 'conflict';
+  if (['SOURCE_CHANGED', 'SOURCE_INACTIVE', 'OFFER_INACTIVE'].some(message => error.message.includes(message)) || error.code === 'P0002') return 'conflict';
   if (error.message.includes('REVISION_EXISTS') || error.code === '23505') return 'exists';
   if (error.message.includes('INVALID_REVISION') || error.message.includes('REVISION_NUMBER_FIXED')) return 'number';
   if (error.message.includes('INVALID_') || error.message.includes('REQUEST_CONFLICT') || error.code.startsWith('22')) return 'invalid';
@@ -103,8 +105,13 @@ export async function loadRevisionContext(sourceId: string): Promise<RevisionCon
     if (authError || !auth.user || auth.user.is_anonymous) return { context: null, error: 'auth' };
     const { data, error } = await supabase.rpc('get_revision_context', { p_source_id: sourceId });
     if (error) return { context: null, error: revisionError(error) };
+    if (!data.source.is_active) return { context: null, error: 'conflict' };
+    const { data: activeFamily, error: familyError } = await supabase.from('eski_teklifler')
+      .select('id').eq('family_id', data.source.family_id).eq('is_active', true);
+    if (familyError) return { context: null, error: revisionError(familyError) };
+    const activeIds = new Set((activeFamily ?? []).map(row => row.id));
     return { context: { source: mapOffer(data.source), baseOfferNo: data.base_offer_no, suggestedOfferNo: data.suggested_offer_no,
-      relatedOffers: data.related_offers.map((row: { id: string; offer_no: string }) => ({ id: row.id, offerNo: row.offer_no })) }, error: null };
+      relatedOffers: data.related_offers.filter((row: { id: string }) => activeIds.has(row.id)).map((row: { id: string; offer_no: string }) => ({ id: row.id, offerNo: row.offer_no })) }, error: null };
   } catch { return { context: null, error: 'unavailable' }; }
 }
 export async function saveRevision(sourceId: string, version: number, offerNo: string, changes: Record<string, string>, requestId: string): Promise<OfferSaveResult> {
@@ -125,6 +132,21 @@ export async function saveRevision(sourceId: string, version: number, offerNo: s
       p_changes: changes, p_request_id: requestId,
     });
     if (error) return { offer: null, error: revisionError(error) };
+    if (data?.is_active === false) return { offer: null, error: 'conflict' };
     return { offer: mapOffer(data), error: null };
   } catch { return { offer: null, error: 'unavailable' }; }
+}
+
+export async function deleteOffer(id: string, expectedVersion: number): Promise<{ error: OfferSaveError | null }> {
+  if (typeof id !== 'string' || !uuid.test(id) || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) return { error: 'invalid' };
+  try {
+    const supabase = await supabaseServer();
+    if (!supabase) return { error: 'configuration' };
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user || auth.user.is_anonymous) return { error: 'auth' };
+    const { data, error } = await supabase.rpc('soft_delete_offer', { p_offer_id: id, p_expected_version: expectedVersion });
+    if (error) return { error: revisionError(error) };
+    if (data?.id !== id || data?.is_active !== false) return { error: 'unavailable' };
+    return { error: null };
+  } catch { return { error: 'unavailable' }; }
 }
