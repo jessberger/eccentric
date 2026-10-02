@@ -132,3 +132,37 @@
 .offer-actions .delete-offer-button:hover{background:#fff0ef;border-color:#ca8983}
 .delete-confirm{background:#b6322c;border-color:#b6322c}
 .delete-confirm:hover:not(:disabled){background:#982721;border-color:#982721}
+
+/* Muted group colours, shared by filters, offer cards and detail dialogs. */
+.workspace{background:#e8eef2}
+.workspace-header{background:#fdfefe;border-bottom-color:#b5c8d4}
+.filter-area{background:#dde9f0}
+.filter-panel{background:#e5eff5;border-color:#b4cad8}
+.multi-filter-label{color:#36566b}
+.multi-filter-trigger{border-color:#adc4d3;color:#294b61}
+.multi-filter-clear{background:#e5eef5;color:#28566e}
+.multi-filter-clear:hover:not(:disabled){background:#d4e5f0}
+.filter-panel .multi-filter-option[aria-checked=true]{background:#dcece5;color:#244f40}
+.offer-row{background:#fff;border-color:#9fb7c7}
+.offer-row:nth-child(even){background:#f3f7fa;border-color:#9fb7c7}
+.offer-box dt,.detail-values dt{color:#526878}
+.offer-box dd,.detail-values dd{color:#1e3545}
+.offer-box dl>div{border-bottom-color:#e0e7eb}
+
+.filter-group-button:nth-child(1),.offer-box:nth-child(1),.detail-group:nth-child(1){--group-bg:#ddeaf5;--group-ink:#2d516e;--group-border:#b7cddd}
+.filter-group-button:nth-child(2),.offer-box:nth-child(2),.detail-group:nth-child(2){--group-bg:#e2eee5;--group-ink:#385c46;--group-border:#bdd2c2}
+.filter-group-button:nth-child(3),.offer-box:nth-child(3),.detail-group:nth-child(3){--group-bg:#dfeeed;--group-ink:#305b59;--group-border:#b5cfcd}
+.filter-group-button:nth-child(4),.offer-box:nth-child(4),.detail-group:nth-child(4){--group-bg:#f1eadd;--group-ink:#685537;--group-border:#d9ccb4}
+.filter-group-button:nth-child(5),.offer-box:nth-child(5),.detail-group:nth-child(5){--group-bg:#eae5f1;--group-ink:#58496e;--group-border:#cfc2dd}
+.filter-group-button:nth-child(6),.offer-box:nth-child(6),.detail-group:nth-child(6){--group-bg:#e2e9ee;--group-ink:#43586b;--group-border:#bfccd6}
+.filter-group-button{background:var(--group-bg);color:var(--group-ink);border-color:var(--group-border)}
+.filter-group-button:hover{background:var(--group-bg);border-color:var(--group-ink)}
+.filter-group-button.selected{background:#c9dfed;color:#244e69;border-color:#4c809f}
+.filter-indicator{color:inherit}
+.filter-indicator b{background:#fff;color:#30556e}
+.offer-box,.detail-group{border-color:var(--group-border)}
+.offer-box h2,.detail-group h3{background:var(--group-bg);color:var(--group-ink);border-bottom-color:var(--group-border)}
+.offer-dialog{background:#e8eff4;border-color:#a5becf}
+.offer-dialog-header,.offer-dialog-footer{background:#f7fafc;border-color:#c3d3de}
+.offer-actions .inspect-button{background:#dcebf5;border-color:#aac8dc;color:#295772}
+.offer-actions .inspect-button:hover{background:#cbdfee;border-color:#739db8}
