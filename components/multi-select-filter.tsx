@@ -33,6 +33,7 @@ export function MultiSelectFilter({ label, options, selected, onChange, disabled
         {filtered.length === 0 && <p>{de ? 'Keine passenden Werte.' : 'No matching values.'}</p>}
         {limit < filtered.length && <button type="button" className="multi-filter-clear" onClick={() => setLimit(current => current + 100)}>{de ? 'Weitere anzeigen' : 'Show more'}</button>}
       </div>
+      <button type="button" className="multi-filter-clear" disabled={disabled || filtered.every(value => chosen.has(value))} onClick={() => onChange(Array.from(new Set([...selected, ...filtered])))}>{de ? 'Alle Suchergebnisse auswählen' : 'Select all matching options'} ({filtered.length})</button>
     </div>}
   </div>;
 }
