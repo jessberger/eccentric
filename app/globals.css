@@ -66,7 +66,7 @@
 .offer-dialog-header p{font-size:13px;color:var(--muted);margin-top:3px}
 .dialog-close{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--line);border-radius:5px;background:white;color:var(--muted);font-size:24px;flex-shrink:0}
 .dialog-close:hover{background:#edf5fa}
-.offer-dialog-body{overflow:auto;padding:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start;overscroll-behavior:contain}
+.offer-dialog-body{min-height:0;overflow:auto;padding:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;gap:14px;align-items:start;overscroll-behavior:contain}
 .detail-group{border:1px solid #dce5eb;background:#fff;border-radius:6px;min-width:0;overflow:hidden}
 .detail-group h3{font-size:13px;font-weight:700;color:#315269;padding:12px 14px;margin:0;border-bottom:1px solid #e3e9ed;background:#edf4f8}
 .detail-values{padding:0 14px;margin:0}
