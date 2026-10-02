@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { saveOffer } from '@/app/offers/actions';
+import { saveOffer, saveRevision } from '@/app/offers/actions';
 import { offerFields, offerGroups } from '@/lib/offer-groups';
 import type { Offer, OfferSaveError } from '@/lib/offers';
 import { useLanguage } from './language';
@@ -12,6 +12,8 @@ const text = {
   en: {
     title: 'Edit', close: 'Close', cancel: 'Cancel', save: 'Save', saving: 'Saving…', discard: 'Discard your unsaved changes?',
     errors: {
+      exists: 'This offer number already exists. Choose another number.',
+      number: 'Keep the base number and use uppercase revision letters after the underscore.',
       auth: 'Your session has expired. Keep a copy of your changes and sign in again.',
       configuration: 'The database connection is not configured.',
       schema: 'The database update setup is missing. Please contact your administrator.',
@@ -24,6 +26,8 @@ const text = {
   de: {
     title: 'Bearbeiten', close: 'Schließen', cancel: 'Abbrechen', save: 'Speichern', saving: 'Wird gespeichert…', discard: 'Nicht gespeicherte Änderungen verwerfen?',
     errors: {
+      exists: 'Diese Angebotsnummer existiert bereits. Wählen Sie eine andere Nummer.',
+      number: 'Behalten Sie die Basisnummer und verwenden Sie Großbuchstaben nach dem Unterstrich.',
       auth: 'Ihre Sitzung ist abgelaufen. Kopieren Sie Ihre Änderungen und melden Sie sich erneut an.',
       configuration: 'Die Datenbankverbindung ist nicht eingerichtet.',
       schema: 'Die Datenbank ist noch nicht für Änderungen eingerichtet. Bitte wenden Sie sich an Ihren Administrator.',
@@ -35,17 +39,19 @@ const text = {
   },
 };
 
-export function EditOfferDialog({ offer, onClose, onSaved }: { offer: Offer; onClose: () => void; onSaved: (offer: Offer) => void }) {
+export function EditOfferDialog({ offer, revision, onClose, onSaved }: { revision?: { offerNo: string }; offer: Offer; onClose: () => void; onSaved: (offer: Offer) => void }) {
   const { language } = useLanguage();
   const t = text[language];
   const dialog = useRef<HTMLDialogElement>(null);
   const savingRef = useRef(false);
-  const [initialValues] = useState<Record<string, string>>(() => ({ ...offer.values, last_modified: todayInBerlin() }));
+  const requestId = useRef<string | null>(null);
+  const [uncertain, setUncertain] = useState(false);
+  const [initialValues] = useState<Record<string, string>>(() => ({ ...offer.values, last_modified: todayInBerlin(), ...(revision ? { offer_date: todayInBerlin(), offer_no: revision.offerNo } : {}) }));
   const [values, setValues] = useState<Record<string, string>>({ ...initialValues });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<OfferSaveError | null>(null);
   const changes = Object.fromEntries(offerFields.filter(field => (values[field.key] ?? '') !== (offer.values[field.key] ?? '')).map(field => [field.key, values[field.key] ?? '']));
-  const hasChanges = Object.keys(changes).length > 0;
+  const hasChanges = !!revision || Object.keys(changes).length > 0;
   const dirty = offerFields.some(field => (values[field.key] ?? '') !== (initialValues[field.key] ?? ''));
 
   useEffect(() => {
@@ -58,14 +64,18 @@ export function EditOfferDialog({ offer, onClose, onSaved }: { offer: Offer; onC
   }, []);
 
   useEffect(() => {
-    if (!dirty && !saving) return;
+    if (!dirty && !saving && !uncertain) return;
     function warn(event: BeforeUnloadEvent) { event.preventDefault(); event.returnValue = ''; }
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty, saving]);
+  }, [dirty, saving, uncertain]);
 
   function close() {
     if (savingRef.current) return;
+    if (uncertain) {
+      if (window.confirm(language === 'de' ? 'Der Speicherstatus ist unklar. Vor einer neuen Revision die Liste aktualisieren. Trotzdem schließen?' : 'Save status is unknown. Refresh the list before creating another revision. Close anyway?')) onClose();
+      return;
+    }
     if (!dirty || window.confirm(t.discard)) onClose();
   }
 
@@ -74,17 +84,22 @@ export function EditOfferDialog({ offer, onClose, onSaved }: { offer: Offer; onC
     savingRef.current = true;
     setSaving(true); setError(null);
     try {
-      const result = await saveOffer(offer.id, offer.recordVersion, { ...changes, last_modified: values.last_modified });
+      if (revision && !requestId.current) requestId.current = crypto.randomUUID();
+      const revisionChanges = Object.fromEntries(Object.entries(changes).filter(([key]) => key !== 'offer_no'));
+      const result = revision
+        ? await saveRevision(offer.id, offer.recordVersion, values.offer_no, { ...revisionChanges, offer_date: values.offer_date, last_modified: values.last_modified }, requestId.current!)
+        : await saveOffer(offer.id, offer.recordVersion, { ...changes, last_modified: values.last_modified });
+      if (revision && result.error === 'unavailable') setUncertain(true);
       if (result.error !== null) { setError(result.error); return; }
       onSaved(result.offer);
-    } catch { setError('unavailable'); }
+    } catch { setError('unavailable'); if (revision) setUncertain(true); }
     finally { savingRef.current = false; setSaving(false); }
   }
 
   return <dialog ref={dialog} className="offer-dialog" aria-labelledby="edit-offer-title" onCancel={event => { event.preventDefault(); close(); }}>
     <form className="offer-dialog-content" onSubmit={event => { event.preventDefault(); void submit(); }} aria-busy={saving}>
       <header className="offer-dialog-header">
-        <div><h2 id="edit-offer-title">{t.title}{offer.values.offer_no ? ` · ${offer.values.offer_no}` : ''}</h2><p>{offer.values.customer_name || '—'}</p></div>
+        <div><h2 id="edit-offer-title">{revision ? (language === 'de' ? 'Revidieren' : 'Revise') : t.title}{offer.values.offer_no ? ` · ${offer.values.offer_no}` : ''}</h2><p>{offer.values.customer_name || '—'}</p></div>
         <button type="button" className="dialog-close" aria-label={t.close} onClick={close} disabled={saving} autoFocus>×</button>
       </header>
       <div className="offer-dialog-body">
@@ -93,12 +108,12 @@ export function EditOfferDialog({ offer, onClose, onSaved }: { offer: Offer; onC
           <div className="detail-inputs">{group.fields.map(field => <label key={field.key} htmlFor={`edit-${field.key}`}>
             <span>{field[language]}</span>
             {field.key === 'offer_date' || field.key === 'last_modified' ?
-              <input type="date" id={`edit-${field.key}`} min="0001-01-01" max="9999-12-31" value={values[field.key] ?? ''} required={field.key === 'last_modified'} disabled={saving} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} /> :
-              <textarea id={`edit-${field.key}`} value={values[field.key] ?? ''} rows={Math.min(6, Math.max(['customer_name', 'file_name_on_lexware', 'medium'].includes(field.key) ? 2 : 1, (values[field.key] ?? '').split('\n').length))} disabled={saving} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} />}
+              <input type="date" id={`edit-${field.key}`} min="0001-01-01" max="9999-12-31" value={values[field.key] ?? ''} required={!!revision || field.key === 'last_modified'} disabled={saving || uncertain} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} /> :
+              <textarea readOnly={field.key === 'offer_no' && !revision && offer.revisionIndex > 0} id={`edit-${field.key}`} value={values[field.key] ?? ''} rows={Math.min(6, Math.max(['customer_name', 'file_name_on_lexware', 'medium'].includes(field.key) ? 2 : 1, (values[field.key] ?? '').split('\n').length))} disabled={saving || uncertain} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} />}
           </label>)}</div>
         </section>)}
       </div>
-      {error && <p className="form-error edit-save-error" role="alert">{t.errors[error]}</p>}
+      {error && <p className="form-error edit-save-error" role="alert">{error === 'unavailable' && revision ? (language === 'de' ? 'Speichern konnte nicht bestätigt werden. Klicken Sie erneut auf Speichern, um denselben Vorgang sicher abzuschließen.' : 'Saving could not be confirmed. Click Save again to safely finish the same request.') : t.errors[error]}</p>}
       <footer className="offer-dialog-footer"><div>
         <button type="button" className="outline-button" disabled={saving} onClick={close}>{t.cancel}</button>
         <button type="submit" className="solid-button" disabled={saving || !hasChanges || error === 'conflict'}>{saving ? t.saving : t.save}</button>

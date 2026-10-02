@@ -3,14 +3,14 @@
 import { supabaseServer } from '@/lib/supabase';
 import { offerFields } from '@/lib/offer-groups';
 import { isValidOfferDate, todayInBerlin } from '@/lib/offer-dates';
-import type { Offer, OfferBatch, OfferLoadError, OfferSaveResult } from '@/lib/offers';
+import type { Offer, OfferBatch, OfferLoadError, OfferSaveResult, OfferSaveError, RevisionContextResult } from '@/lib/offers';
 
 function failure(error: OfferLoadError): OfferBatch { return { offers: [], remaining: 0, nextCursor: null, error }; }
 
 function mapOffer(row: Record<string, unknown>): Offer {
   const recordVersion = Number(row.record_version);
   if (!Number.isSafeInteger(recordVersion) || recordVersion < 1) throw new Error('Invalid record version');
-  return { id: String(row.id), recordVersion, values: Object.fromEntries(offerFields.map(field => [field.key, row[field.key] == null ? '' : String(row[field.key])])) };
+  return { id: String(row.id), recordVersion, revisionIndex: Number(row.revision_index ?? 0), values: Object.fromEntries(offerFields.map(field => [field.key, row[field.key] == null ? '' : String(row[field.key])])) };
 }
 
 export async function loadOfferBatch(cursor: string | null = null): Promise<OfferBatch> {
@@ -21,7 +21,7 @@ export async function loadOfferBatch(cursor: string | null = null): Promise<Offe
     const { data: auth, error: authError } = await supabase.auth.getUser();
     if (authError || !auth.user || auth.user.is_anonymous) return failure('auth');
     const columns = offerFields.map(field => field.key);
-    let request = supabase.from('eski_teklifler').select(['id', 'record_version', ...columns].join(','), { count: 'exact' }).order('id', { ascending: true }).limit(1000);
+    let request = supabase.from('eski_teklifler').select(['id', 'record_version', 'revision_index', ...columns].join(','), { count: 'exact' }).order('id', { ascending: true }).limit(1000);
     if (cursor) request = request.gt('id', cursor);
     const { data, count, error } = await request.abortSignal(AbortSignal.timeout(20000));
     if (error) {
@@ -66,11 +66,13 @@ export async function saveOffer(id: string, expectedVersion: number, changes: Re
       .update(updateValues)
       .eq('id', id)
       .eq('record_version', expectedVersion)
-      .select(['id', 'record_version', ...columns].join(','))
+      .select(['id', 'record_version', 'revision_index', ...columns].join(','))
       .maybeSingle();
 
     if (error) {
       console.error('Offer update failed:', error.code);
+      if (error.code === '23505') return { offer: null, error: 'exists' };
+      if (error.message.includes('REVISION_NUMBER_FIXED')) return { offer: null, error: 'number' };
       if (error.code === '42501') return { offer: null, error: 'permission' };
       if (['42P01', '42703', 'PGRST204', 'PGRST205'].includes(error.code)) return { offer: null, error: 'schema' };
       if (['PGRST301', 'PGRST303'].includes(error.code)) return { offer: null, error: 'auth' };
@@ -78,5 +80,51 @@ export async function saveOffer(id: string, expectedVersion: number, changes: Re
     }
     if (!data) return { offer: null, error: 'conflict' };
     return { offer: mapOffer(data as unknown as Record<string, unknown>), error: null };
+  } catch { return { offer: null, error: 'unavailable' }; }
+}
+
+function revisionError(error: { code: string; message: string }): OfferSaveError {
+  if (error.message.includes('AUTH_REQUIRED') || ['PGRST301', 'PGRST303'].includes(error.code)) return 'auth';
+  if (error.message.includes('SOURCE_CHANGED') || error.code === 'P0002') return 'conflict';
+  if (error.message.includes('REVISION_EXISTS') || error.code === '23505') return 'exists';
+  if (error.message.includes('INVALID_REVISION') || error.message.includes('REVISION_NUMBER_FIXED')) return 'number';
+  if (error.message.includes('INVALID_') || error.message.includes('REQUEST_CONFLICT') || error.code.startsWith('22')) return 'invalid';
+  if (error.code === '42501') return 'permission';
+  if (['42P01', '42703', '42883', 'PGRST202', 'PGRST204', 'PGRST205'].includes(error.code)) return 'schema';
+  return 'unavailable';
+}
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export async function loadRevisionContext(sourceId: string): Promise<RevisionContextResult> {
+  if (typeof sourceId !== 'string' || !uuid.test(sourceId)) return { context: null, error: 'invalid' };
+  try {
+    const supabase = await supabaseServer();
+    if (!supabase) return { context: null, error: 'configuration' };
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user || auth.user.is_anonymous) return { context: null, error: 'auth' };
+    const { data, error } = await supabase.rpc('get_revision_context', { p_source_id: sourceId });
+    if (error) return { context: null, error: revisionError(error) };
+    return { context: { source: mapOffer(data.source), baseOfferNo: data.base_offer_no, suggestedOfferNo: data.suggested_offer_no,
+      relatedOffers: data.related_offers.map((row: { id: string; offer_no: string }) => ({ id: row.id, offerNo: row.offer_no })) }, error: null };
+  } catch { return { context: null, error: 'unavailable' }; }
+}
+export async function saveRevision(sourceId: string, version: number, offerNo: string, changes: Record<string, string>, requestId: string): Promise<OfferSaveResult> {
+  const invalid: OfferSaveResult = { offer: null, error: 'invalid' };
+  if (typeof sourceId !== 'string' || !uuid.test(sourceId) || typeof requestId !== 'string' || !uuid.test(requestId) ||
+      !Number.isSafeInteger(version) || version < 1 || typeof offerNo !== 'string' || offerNo.length > 100000 || offerNo.includes('\u0000') ||
+      !changes || typeof changes !== 'object' || Array.isArray(changes)) return invalid;
+  const allowed = new Set(offerFields.map(field => field.key).filter(key => key !== 'offer_no'));
+  if (Object.entries(changes).some(([key, value]) => !allowed.has(key) || typeof value !== 'string' || value.length > 100000 || value.includes('\u0000')) ||
+      new TextEncoder().encode(JSON.stringify(changes)).length > 500000 || !isValidOfferDate(changes.offer_date) || !isValidOfferDate(changes.last_modified)) return invalid;
+  try {
+    const supabase = await supabaseServer();
+    if (!supabase) return { offer: null, error: 'configuration' };
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user || auth.user.is_anonymous) return { offer: null, error: 'auth' };
+    const { data, error } = await supabase.rpc('create_offer_revision', {
+      p_source_id: sourceId, p_source_version: version, p_offer_no: offerNo,
+      p_changes: changes, p_request_id: requestId,
+    });
+    if (error) return { offer: null, error: revisionError(error) };
+    return { offer: mapOffer(data), error: null };
   } catch { return { offer: null, error: 'unavailable' }; }
 }
