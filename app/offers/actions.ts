@@ -2,6 +2,7 @@
 
 import { supabaseServer } from '@/lib/supabase';
 import { offerFields } from '@/lib/offer-groups';
+import { isValidOfferDate, todayInBerlin } from '@/lib/offer-dates';
 import type { Offer, OfferBatch, OfferLoadError, OfferSaveResult } from '@/lib/offers';
 
 function failure(error: OfferLoadError): OfferBatch { return { offers: [], remaining: 0, nextCursor: null, error }; }
@@ -40,11 +41,18 @@ export async function loadOfferBatch(cursor: string | null = null): Promise<Offe
 export async function saveOffer(id: string, expectedVersion: number, changes: Record<string, string>): Promise<OfferSaveResult> {
   const invalid: OfferSaveResult = { offer: null, error: 'invalid' };
   const columns = offerFields.map(field => field.key);
-  const allowed = new Set(columns.filter(key => key !== 'offer_date' && key !== 'last_modified'));
+  const allowed = new Set(columns);
   if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ||
       !Number.isSafeInteger(expectedVersion) || expectedVersion < 1 || !changes || typeof changes !== 'object' || Array.isArray(changes)) return invalid;
   const entries = Object.entries(changes);
   if (!entries.length || entries.length > allowed.size || entries.some(([key, value]) => !allowed.has(key) || typeof value !== 'string' || value.length > 100000 || value.includes('\u0000')) || JSON.stringify(changes).length > 500000) return invalid;
+  for (const [key, value] of entries) {
+    if (key === 'offer_date' && value !== '' && !isValidOfferDate(value)) return invalid;
+    if (key === 'last_modified' && !isValidOfferDate(value)) return invalid;
+  }
+  const updateValues: Record<string, string | null> = Object.fromEntries(entries);
+  if (!Object.hasOwn(changes, 'last_modified')) updateValues.last_modified = todayInBerlin();
+  if (updateValues.offer_date === '') updateValues.offer_date = null;
 
   try {
     const supabase = await supabaseServer();
@@ -55,7 +63,7 @@ export async function saveOffer(id: string, expectedVersion: number, changes: Re
     // The version condition and the history trigger execute in the same UPDATE.
     // Only changed fields are sent, preserving untouched NULLs and original values.
     const { data, error } = await supabase.from('eski_teklifler')
-      .update(Object.fromEntries(entries))
+      .update(updateValues)
       .eq('id', id)
       .eq('record_version', expectedVersion)
       .select(['id', 'record_version', ...columns].join(','))

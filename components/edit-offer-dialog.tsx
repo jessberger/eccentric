@@ -6,14 +6,7 @@ import { offerFields, offerGroups } from '@/lib/offer-groups';
 import type { Offer, OfferSaveError } from '@/lib/offers';
 import { useLanguage } from './language';
 
-function todayInBerlin() {
-  return new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
-}
-
-function displayDate(value: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  return match ? `${match[3]}.${match[2]}.${match[1]}` : value;
-}
+import { todayInBerlin } from '@/lib/offer-dates';
 
 const text = {
   en: {
@@ -47,19 +40,13 @@ export function EditOfferDialog({ offer, onClose, onSaved }: { offer: Offer; onC
   const t = text[language];
   const dialog = useRef<HTMLDialogElement>(null);
   const savingRef = useRef(false);
-  const [values, setValues] = useState({ ...offer.values });
-  const [today, setToday] = useState(todayInBerlin);
+  const [initialValues] = useState<Record<string, string>>(() => ({ ...offer.values, last_modified: todayInBerlin() }));
+  const [values, setValues] = useState<Record<string, string>>({ ...initialValues });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<OfferSaveError | null>(null);
-  const changes = Object.fromEntries(offerFields.filter(field => field.key !== 'offer_date' && field.key !== 'last_modified' && (values[field.key] ?? '') !== (offer.values[field.key] ?? '')).map(field => [field.key, values[field.key] ?? '']));
-  const dirty = Object.keys(changes).length > 0;
-
-  useEffect(() => {
-    const updateToday = () => setToday(todayInBerlin());
-    const timer = window.setInterval(updateToday, 60000);
-    window.addEventListener('focus', updateToday);
-    return () => { window.clearInterval(timer); window.removeEventListener('focus', updateToday); };
-  }, []);
+  const changes = Object.fromEntries(offerFields.filter(field => (values[field.key] ?? '') !== (offer.values[field.key] ?? '')).map(field => [field.key, values[field.key] ?? '']));
+  const hasChanges = Object.keys(changes).length > 0;
+  const dirty = offerFields.some(field => (values[field.key] ?? '') !== (initialValues[field.key] ?? ''));
 
   useEffect(() => {
     const element = dialog.current;
@@ -83,11 +70,11 @@ export function EditOfferDialog({ offer, onClose, onSaved }: { offer: Offer; onC
   }
 
   async function submit() {
-    if (savingRef.current || !dirty || error === 'conflict') return;
+    if (savingRef.current || !hasChanges || error === 'conflict') return;
     savingRef.current = true;
     setSaving(true); setError(null);
     try {
-      const result = await saveOffer(offer.id, offer.recordVersion, changes);
+      const result = await saveOffer(offer.id, offer.recordVersion, { ...changes, last_modified: values.last_modified });
       if (result.error !== null) { setError(result.error); return; }
       onSaved(result.offer);
     } catch { setError('unavailable'); }
@@ -106,7 +93,7 @@ export function EditOfferDialog({ offer, onClose, onSaved }: { offer: Offer; onC
           <div className="detail-inputs">{group.fields.map(field => <label key={field.key} htmlFor={`edit-${field.key}`}>
             <span>{field[language]}</span>
             {field.key === 'offer_date' || field.key === 'last_modified' ?
-              <textarea id={`edit-${field.key}`} value={field.key === 'last_modified' ? today : displayDate(offer.values.offer_date ?? '')} rows={1} readOnly /> :
+              <input type="date" id={`edit-${field.key}`} min="0001-01-01" max="9999-12-31" value={values[field.key] ?? ''} required={field.key === 'last_modified'} disabled={saving} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} /> :
               <textarea id={`edit-${field.key}`} value={values[field.key] ?? ''} rows={Math.min(6, Math.max(['customer_name', 'file_name_on_lexware', 'medium'].includes(field.key) ? 2 : 1, (values[field.key] ?? '').split('\n').length))} disabled={saving} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} />}
           </label>)}</div>
         </section>)}
@@ -114,7 +101,7 @@ export function EditOfferDialog({ offer, onClose, onSaved }: { offer: Offer; onC
       {error && <p className="form-error edit-save-error" role="alert">{t.errors[error]}</p>}
       <footer className="offer-dialog-footer"><div>
         <button type="button" className="outline-button" disabled={saving} onClick={close}>{t.cancel}</button>
-        <button type="submit" className="solid-button" disabled={saving || !dirty || error === 'conflict'}>{saving ? t.saving : t.save}</button>
+        <button type="submit" className="solid-button" disabled={saving || !hasChanges || error === 'conflict'}>{saving ? t.saving : t.save}</button>
       </div></footer>
     </form>
   </dialog>;
