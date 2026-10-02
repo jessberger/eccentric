@@ -39,7 +39,8 @@ export async function loadOfferBatch(cursor: string | null = null): Promise<Offe
 
 export async function saveOffer(id: string, expectedVersion: number, changes: Record<string, string>): Promise<OfferSaveResult> {
   const invalid: OfferSaveResult = { offer: null, error: 'invalid' };
-  const allowed = new Set(offerFields.map(field => field.key));
+  const columns = offerFields.map(field => field.key);
+  const allowed = new Set(columns.filter(key => key !== 'offer_date' && key !== 'last_modified'));
   if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ||
       !Number.isSafeInteger(expectedVersion) || expectedVersion < 1 || !changes || typeof changes !== 'object' || Array.isArray(changes)) return invalid;
   const entries = Object.entries(changes);
@@ -57,7 +58,7 @@ export async function saveOffer(id: string, expectedVersion: number, changes: Re
       .update(Object.fromEntries(entries))
       .eq('id', id)
       .eq('record_version', expectedVersion)
-      .select(['id', 'record_version', ...allowed].join(','))
+      .select(['id', 'record_version', ...columns].join(','))
       .maybeSingle();
 
     if (error) {

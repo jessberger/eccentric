@@ -117,3 +117,5 @@
 .offer-count{min-width:105px;font-variant-numeric:tabular-nums}
 
 .edit-save-error{margin:0 18px 10px;flex-shrink:0;max-height:130px;overflow:auto}
+
+.detail-inputs textarea[readonly]{background:#f0f4f7;color:#536b7c;resize:none;cursor:default}
