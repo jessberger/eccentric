@@ -88,7 +88,7 @@ export async function saveOffer(id: string, expectedVersion: number, changes: Re
 function revisionError(error: { code: string; message: string }): OfferSaveError {
   if (error.message.includes('AUTH_REQUIRED') || ['PGRST301', 'PGRST303'].includes(error.code)) return 'auth';
   if (['SOURCE_CHANGED', 'SOURCE_INACTIVE', 'OFFER_INACTIVE'].some(message => error.message.includes(message)) || error.code === 'P0002') return 'conflict';
-  if (error.message.includes('REVISION_EXISTS') || error.code === '23505') return 'exists';
+  if (['REVISION_EXISTS', 'OFFER_EXISTS'].some(message => error.message.includes(message)) || error.code === '23505') return 'exists';
   if (error.message.includes('INVALID_REVISION') || error.message.includes('REVISION_NUMBER_FIXED')) return 'number';
   if (error.message.includes('INVALID_') || error.message.includes('REQUEST_CONFLICT') || error.code.startsWith('22')) return 'invalid';
   if (error.code === '42501') return 'permission';
@@ -149,4 +149,28 @@ export async function deleteOffer(id: string, expectedVersion: number): Promise<
     if (data?.id !== id || data?.is_active !== false) return { error: 'unavailable' };
     return { error: null };
   } catch { return { error: 'unavailable' }; }
+}
+
+export async function saveCopy(sourceId: string, version: number, offerNo: string, changes: Record<string, string>, requestId: string): Promise<OfferSaveResult> {
+  if (typeof offerNo === 'string') offerNo = offerNo.trim();
+  const invalid: OfferSaveResult = { offer: null, error: 'invalid' };
+  if (typeof sourceId !== 'string' || !uuid.test(sourceId) || typeof requestId !== 'string' || !uuid.test(requestId) ||
+      !Number.isSafeInteger(version) || version < 1 || typeof offerNo !== 'string' || !offerNo || offerNo.length > 1000 || /[\u0000-\u001f\u007f]/.test(offerNo) ||
+      !changes || typeof changes !== 'object' || Array.isArray(changes)) return invalid;
+  const allowed = new Set(offerFields.map(field => field.key).filter(key => key !== 'offer_no'));
+  if (Object.entries(changes).some(([key, value]) => !allowed.has(key) || typeof value !== 'string' || value.length > 100000 || value.includes('\u0000')) ||
+      new TextEncoder().encode(JSON.stringify(changes)).length > 500000 || !isValidOfferDate(changes.offer_date) || !isValidOfferDate(changes.last_modified)) return invalid;
+  try {
+    const supabase = await supabaseServer();
+    if (!supabase) return { offer: null, error: 'configuration' };
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user || auth.user.is_anonymous) return { offer: null, error: 'auth' };
+    const { data, error } = await supabase.rpc('create_offer_copy', {
+      p_source_id: sourceId, p_source_version: version, p_offer_no: offerNo,
+      p_changes: changes, p_request_id: requestId,
+    });
+    if (error) return { offer: null, error: revisionError(error) };
+    if (data?.is_active === false) return { offer: null, error: 'conflict' };
+    return { offer: mapOffer(data), error: null };
+  } catch { return { offer: null, error: 'unavailable' }; }
 }

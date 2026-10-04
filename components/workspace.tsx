@@ -73,6 +73,7 @@ export function Workspace({ email }: { email: string }) {
   const [opened, setOpened] = useState<Offer | null>(null);
   const [revising, setRevising] = useState<Offer | null>(null);
   const [deleting, setDeleting] = useState<Offer | null>(null);
+  const [copying, setCopying] = useState<Offer | null>(null);
   const [editing, setEditing] = useState<Offer | null>(null);
   const [page, setPage] = useState(1);
   const [retry, setRetry] = useState(0);
@@ -81,7 +82,7 @@ export function Workspace({ email }: { email: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true); setError(null); setOffers([]); setOpened(null); setEditing(null); setRevising(null); setDeleting(null);
+    setLoading(true); setError(null); setOffers([]); setOpened(null); setEditing(null); setRevising(null); setDeleting(null); setCopying(null);
     setProgress({ loaded: 0, total: 0 }); setPage(1);
     async function loadAll() {
       const collected: Offer[] = [];
@@ -134,7 +135,7 @@ export function Workspace({ email }: { email: string }) {
       return updated.sort(compareOffers);
     });
     setEditing(null);
-    if (revising) { setRevising(null); setFilters({}); setQuery(saved.values.offer_no); setPage(1); }
+    if (revising || copying) { setRevising(null); setCopying(null); setFilters({}); setQuery(saved.values.offer_no); setPage(1); }
   }
 
   return <div className="workspace">
@@ -162,7 +163,7 @@ export function Workspace({ email }: { email: string }) {
               <h2>{item[language]}</h2>
               <dl>{item.fields.filter(field => field.preview).map(field => <div key={field.key} className={highlightedFields.has(field.key) ? 'offer-field-highlight' : undefined}><dt>{field[language]}</dt><dd>{offer.values[field.key] || '—'}</dd></div>)}</dl>
             </section>)}</div>
-            <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button><button type="button" onClick={() => setEditing(offer)}>{t.edit}</button><button type="button" onClick={() => setRevising(offer)}>{t.revise}</button><span title={t.readOnly}><button type="button" disabled>{t.copy}</button></span><button type="button" className="delete-offer-button" onClick={() => setDeleting(offer)}>{language === 'de' ? 'Löschen' : 'Delete'}</button></div>
+            <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button><button type="button" onClick={() => setEditing(offer)}>{t.edit}</button><button type="button" onClick={() => setRevising(offer)}>{t.revise}</button><button type="button" onClick={() => setCopying(offer)}>{t.copy}</button><button type="button" className="delete-offer-button" onClick={() => setDeleting(offer)}>{language === 'de' ? 'Löschen' : 'Delete'}</button></div>
           </article>)}
           {filtered.length === 0 && <div className="offers-empty"><p>{query || activeFilters.length > 0 ? t.empty : t.noData}</p>{(query || activeFilters.length > 0) && <button type="button" className="outline-button" onClick={resetFilters}>{t.clear}</button>}</div>}
         </>}
@@ -172,6 +173,7 @@ export function Workspace({ email }: { email: string }) {
     {deleting && <DeleteOfferDialog key={deleting.id} offer={deleting} onClose={() => setDeleting(null)} onDeleted={id => { setOffers(previous => previous.filter(offer => offer.id !== id)); setDeleting(null); }} />}
     {opened && <OfferDialog key={opened.id} offer={opened} onClose={() => setOpened(null)} />}
     {revising && <ReviseOfferDialog key={revising.id} offer={revising} onClose={() => setRevising(null)} onSaved={applySavedOffer} />}
+    {copying && <EditOfferDialog key={`copy-${copying.id}`} offer={copying} copy onClose={() => setCopying(null)} onSaved={applySavedOffer} />}
     {editing && <EditOfferDialog key={`${editing.id}-${editing.recordVersion}`} offer={editing} onClose={() => setEditing(null)} onSaved={applySavedOffer} />}
   </div>;
 }
