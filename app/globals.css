@@ -178,4 +178,6 @@
 @media(max-width:700px){.offer-print-actions{flex-basis:100%;flex-direction:row}.offer-print-actions button{flex:1}}
 
 .pdf-language-options{display:flex;gap:12px;padding:24px}
-.pdf-language-options a{flex:1;min-height:44px;text-decoration:none}
+.pdf-language-options a,.pdf-language-options button{flex:1;min-height:44px;text-decoration:none}
+
+.pdf-download-status{padding:0 24px 18px;font-size:13px;color:var(--muted)}
