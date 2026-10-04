@@ -23,6 +23,8 @@ function compareOffers(a: Offer, b: Offer) {
   return right.localeCompare(left) || offerNumberOrder.compare(b.values.offer_no || '', a.values.offer_no || '') || a.id.localeCompare(b.id);
 }
 
+const emptyOffer: Offer = { id: '', recordVersion: 1, revisionIndex: 0, values: {} };
+
 const copy = {
   en: { search: 'Search offers…', filters: 'Filters', clear: 'Clear filters', all: 'Contains…', inspect: 'Inspect', edit: 'Edit', revise: 'Revise', copy: 'Copy', new: 'New offer', close: 'Close', count: 'offers', empty: 'No matching offers.', noData: 'No offers are available.', previous: 'Previous', next: 'Next', logout: 'Sign out', signoutError: 'Sign-out failed. Please try again.', refresh: 'Refresh', loading: 'Loading…', retry: 'Try again', login: 'Sign in', readOnly: 'Saving will be enabled in the next step.', errors: { auth: 'Your session has expired. Please sign in again.', configuration: 'The database connection is not configured.', schema: 'The offer table or its columns could not be found.', permission: 'Your account does not have permission to read these offers.', unavailable: 'Offers could not be loaded. Please try again.', invalid: 'Please shorten your search or filter text.' } },
   de: { search: 'Angebote suchen…', filters: 'Filter', clear: 'Filter zurücksetzen', all: 'Enthält…', inspect: 'Ansehen', edit: 'Bearbeiten', revise: 'Revidieren', copy: 'Kopieren', new: 'Neues Angebot', close: 'Schließen', count: 'Angebote', empty: 'Keine passenden Angebote.', noData: 'Keine Angebote verfügbar.', previous: 'Zurück', next: 'Weiter', logout: 'Abmelden', signoutError: 'Abmeldung fehlgeschlagen. Bitte erneut versuchen.', refresh: 'Aktualisieren', loading: 'Wird geladen…', retry: 'Erneut versuchen', login: 'Anmelden', readOnly: 'Speichern wird im nächsten Schritt aktiviert.', errors: { auth: 'Ihre Sitzung ist abgelaufen. Bitte erneut anmelden.', configuration: 'Die Datenbankverbindung ist nicht eingerichtet.', schema: 'Die Angebotstabelle oder ihre Spalten wurden nicht gefunden.', permission: 'Ihr Konto hat keine Leseberechtigung für diese Angebote.', unavailable: 'Angebote konnten nicht geladen werden. Bitte erneut versuchen.', invalid: 'Bitte kürzen Sie Ihren Such- oder Filtertext.' } },
@@ -73,6 +75,7 @@ export function Workspace({ email }: { email: string }) {
   const [opened, setOpened] = useState<Offer | null>(null);
   const [revising, setRevising] = useState<Offer | null>(null);
   const [deleting, setDeleting] = useState<Offer | null>(null);
+  const [newOffer, setNewOffer] = useState(false);
   const [copying, setCopying] = useState<Offer | null>(null);
   const [editing, setEditing] = useState<Offer | null>(null);
   const [page, setPage] = useState(1);
@@ -82,7 +85,7 @@ export function Workspace({ email }: { email: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true); setError(null); setOffers([]); setOpened(null); setEditing(null); setRevising(null); setDeleting(null); setCopying(null);
+    setLoading(true); setError(null); setOffers([]); setOpened(null); setEditing(null); setRevising(null); setDeleting(null); setCopying(null); setNewOffer(false);
     setProgress({ loaded: 0, total: 0 }); setPage(1);
     async function loadAll() {
       const collected: Offer[] = [];
@@ -135,7 +138,7 @@ export function Workspace({ email }: { email: string }) {
       return updated.sort(compareOffers);
     });
     setEditing(null);
-    if (revising || copying) { setRevising(null); setCopying(null); setFilters({}); setQuery(saved.values.offer_no); setPage(1); }
+    if (revising || copying || newOffer) { setNewOffer(false); setRevising(null); setCopying(null); setFilters({}); setQuery(saved.values.offer_no); setPage(1); }
   }
 
   return <div className="workspace">
@@ -147,7 +150,7 @@ export function Workspace({ email }: { email: string }) {
         <span className="offer-count" role="status">{loading ? `${t.loading} ${progress.loaded.toLocaleString(language)} / ${progress.total.toLocaleString(language)}` : error ? '—' : `${filtered.length.toLocaleString(language)} ${t.count}`}</span>
         <button type="button" className="outline-button" disabled={loading} onClick={() => setRetry(value => value + 1)}>{t.refresh}</button>
         <button type="button" className="outline-button" disabled={!query && activeFilters.length === 0} onClick={resetFilters}>{t.clear}</button>
-        <span className="new-offer" title={t.readOnly}><button type="button" className="solid-button" disabled><span aria-hidden="true">+</span> {t.new}</button></span>
+        <span className="new-offer"><button type="button" className="solid-button" disabled={loading || !!error} onClick={() => setNewOffer(true)}><span aria-hidden="true">+</span> {t.new}</button></span>
       </div>
       <section className="filter-area" aria-label={t.filters}>
         <div className="filter-groups">{offerGroups.map(item => {
@@ -173,6 +176,7 @@ export function Workspace({ email }: { email: string }) {
     {deleting && <DeleteOfferDialog key={deleting.id} offer={deleting} onClose={() => setDeleting(null)} onDeleted={id => { setOffers(previous => previous.filter(offer => offer.id !== id)); setDeleting(null); }} />}
     {opened && <OfferDialog key={opened.id} offer={opened} onClose={() => setOpened(null)} />}
     {revising && <ReviseOfferDialog key={revising.id} offer={revising} onClose={() => setRevising(null)} onSaved={applySavedOffer} />}
+    {newOffer && <EditOfferDialog key="new-offer" offer={emptyOffer} newOffer onClose={() => setNewOffer(false)} onSaved={applySavedOffer} />}
     {copying && <EditOfferDialog key={`copy-${copying.id}`} offer={copying} copy onClose={() => setCopying(null)} onSaved={applySavedOffer} />}
     {editing && <EditOfferDialog key={`${editing.id}-${editing.recordVersion}`} offer={editing} onClose={() => setEditing(null)} onSaved={applySavedOffer} />}
   </div>;

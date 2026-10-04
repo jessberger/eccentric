@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { saveOffer, saveRevision, saveCopy } from '@/app/offers/actions';
+import { saveOffer, saveRevision, saveCopy, saveNewOffer } from '@/app/offers/actions';
 import { offerFields, offerGroups } from '@/lib/offer-groups';
 import type { Offer, OfferSaveError } from '@/lib/offers';
 import { useLanguage } from './language';
@@ -39,15 +39,16 @@ const text = {
   },
 };
 
-export function EditOfferDialog({ offer, revision, copy = false, onClose, onSaved }: { copy?: boolean; revision?: { offerNo: string }; offer: Offer; onClose: () => void; onSaved: (offer: Offer) => void }) {
+export function EditOfferDialog({ offer, revision, copy = false, newOffer = false, onClose, onSaved }: { newOffer?: boolean; copy?: boolean; revision?: { offerNo: string }; offer: Offer; onClose: () => void; onSaved: (offer: Offer) => void }) {
   const { language } = useLanguage();
   const t = text[language];
-  const creating = !!revision || copy;
+  const creating = !!revision || copy || newOffer;
   const dialog = useRef<HTMLDialogElement>(null);
   const savingRef = useRef(false);
   const requestId = useRef<string | null>(null);
   const [uncertain, setUncertain] = useState(false);
   const [initialValues] = useState<Record<string, string>>(() => {
+    if (newOffer) return Object.fromEntries(offerFields.map(field => [field.key, '']));
     const initial: Record<string, string> = { ...offer.values, last_modified: todayInBerlin() };
     if (copy) {
       for (const field of offerGroups.find(group => group.id === 'customer')!.fields) initial[field.key] = '';
@@ -91,7 +92,7 @@ export function EditOfferDialog({ offer, revision, copy = false, onClose, onSave
 
   async function submit() {
     if (savingRef.current || !hasChanges || error === 'conflict') return;
-    if (copy && (!values.offer_no.trim() || /[\u0000-\u001f\u007f]/.test(values.offer_no))) { setError('invalid'); return; }
+    if ((copy || newOffer) && (!values.offer_no.trim() || /[\u0000-\u001f\u007f]/.test(values.offer_no))) { setError('invalid'); return; }
     savingRef.current = true;
     setSaving(true); setError(null);
     try {
@@ -100,7 +101,9 @@ export function EditOfferDialog({ offer, revision, copy = false, onClose, onSave
       // Send all customer fields, even if re-entered identically to the source.
       // Send only changed technical fields so untouched database NULLs survive.
       const customerValues = Object.fromEntries(offerGroups.find(group => group.id === 'customer')!.fields.filter(field => field.key !== 'offer_no').map(field => [field.key, values[field.key] ?? '']));
-      const result = copy
+      const result = newOffer
+        ? await saveNewOffer(values.offer_no, revisionChanges, requestId.current!)
+        : copy
         ? await saveCopy(offer.id, offer.recordVersion, values.offer_no, { ...revisionChanges, ...customerValues }, requestId.current!)
         : revision
         ? await saveRevision(offer.id, offer.recordVersion, values.offer_no, { ...revisionChanges, offer_date: values.offer_date, last_modified: values.last_modified }, requestId.current!)
@@ -115,7 +118,7 @@ export function EditOfferDialog({ offer, revision, copy = false, onClose, onSave
   return <dialog ref={dialog} className="offer-dialog" aria-labelledby="edit-offer-title" onCancel={event => { event.preventDefault(); close(); }}>
     <form className="offer-dialog-content" onSubmit={event => { event.preventDefault(); void submit(); }} aria-busy={saving}>
       <header className="offer-dialog-header">
-        <div><h2 id="edit-offer-title">{copy ? (language === 'de' ? 'Kopieren' : 'Copy') : revision ? (language === 'de' ? 'Revidieren' : 'Revise') : t.title}{!copy && offer.values.offer_no ? ` · ${offer.values.offer_no}` : ''}</h2><p>{(copy ? values.customer_name : offer.values.customer_name) || '—'}</p></div>
+        <div><h2 id="edit-offer-title">{newOffer ? (language === 'de' ? 'Neues Angebot' : 'New offer') : copy ? (language === 'de' ? 'Kopieren' : 'Copy') : revision ? (language === 'de' ? 'Revidieren' : 'Revise') : t.title}{!copy && !newOffer && offer.values.offer_no ? ` · ${offer.values.offer_no}` : ''}</h2><p>{((copy || newOffer) ? values.customer_name : offer.values.customer_name) || '—'}</p></div>
         <button type="button" className="dialog-close" aria-label={t.close} onClick={close} disabled={saving} autoFocus>×</button>
       </header>
       <div className="offer-dialog-body">
@@ -124,8 +127,8 @@ export function EditOfferDialog({ offer, revision, copy = false, onClose, onSave
           <div className="detail-inputs">{group.fields.map(field => <label key={field.key} htmlFor={`edit-${field.key}`}>
             <span>{field[language]}</span>
             {field.key === 'offer_date' || field.key === 'last_modified' ?
-              <input type="date" id={`edit-${field.key}`} min="0001-01-01" max="9999-12-31" value={values[field.key] ?? ''} required={creating || field.key === 'last_modified'} disabled={saving || uncertain} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} /> :
-              <textarea required={copy && field.key === 'offer_no'} maxLength={copy && field.key === 'offer_no' ? 1000 : undefined} readOnly={field.key === 'offer_no' && !creating && offer.revisionIndex > 0} id={`edit-${field.key}`} value={values[field.key] ?? ''} rows={Math.min(6, Math.max(['customer_name', 'file_name_on_lexware', 'medium'].includes(field.key) ? 2 : 1, (values[field.key] ?? '').split('\n').length))} disabled={saving || uncertain} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} />}
+              <input type="date" id={`edit-${field.key}`} min="0001-01-01" max="9999-12-31" value={values[field.key] ?? ''} required={!newOffer && (creating || field.key === 'last_modified')} disabled={saving || uncertain} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} /> :
+              <textarea required={(copy || newOffer) && field.key === 'offer_no'} maxLength={(copy || newOffer) && field.key === 'offer_no' ? 1000 : undefined} readOnly={field.key === 'offer_no' && !creating && offer.revisionIndex > 0} id={`edit-${field.key}`} value={values[field.key] ?? ''} rows={Math.min(6, Math.max(['customer_name', 'file_name_on_lexware', 'medium'].includes(field.key) ? 2 : 1, (values[field.key] ?? '').split('\n').length))} disabled={saving || uncertain} onChange={event => { setValues(previous => ({ ...previous, [field.key]: event.target.value })); if (error !== 'conflict') setError(null); }} />}
           </label>)}</div>
         </section>)}
       </div>

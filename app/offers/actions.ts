@@ -174,3 +174,27 @@ export async function saveCopy(sourceId: string, version: number, offerNo: strin
     return { offer: mapOffer(data), error: null };
   } catch { return { offer: null, error: 'unavailable' }; }
 }
+
+export async function saveNewOffer(offerNo: string, changes: Record<string, string>, requestId: string): Promise<OfferSaveResult> {
+  if (typeof offerNo === 'string') offerNo = offerNo.trim();
+  const invalid: OfferSaveResult = { offer: null, error: 'invalid' };
+  if (typeof requestId !== 'string' || !uuid.test(requestId) ||
+      typeof offerNo !== 'string' || !offerNo || offerNo.length > 1000 || /[\u0000-\u001f\u007f]/.test(offerNo) ||
+      !changes || typeof changes !== 'object' || Array.isArray(changes)) return invalid;
+  const allowed = new Set(offerFields.map(field => field.key).filter(key => key !== 'offer_no'));
+  if (Object.entries(changes).some(([key, value]) => !allowed.has(key) || typeof value !== 'string' || value.length > 100000 || value.includes('\u0000')) ||
+      new TextEncoder().encode(JSON.stringify(changes)).length > 500000 || (['offer_date', 'last_modified'].some(key => changes[key] !== undefined && changes[key] !== '' && !isValidOfferDate(changes[key])))) return invalid;
+  try {
+    const supabase = await supabaseServer();
+    if (!supabase) return { offer: null, error: 'configuration' };
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user || auth.user.is_anonymous) return { offer: null, error: 'auth' };
+    const { data, error } = await supabase.rpc('create_new_offer', {
+      p_offer_no: offerNo,
+      p_changes: { ...changes, offer_date: changes.offer_date || null, last_modified: changes.last_modified || null }, p_request_id: requestId,
+    });
+    if (error) return { offer: null, error: revisionError(error) };
+    if (data?.is_active === false) return { offer: null, error: 'conflict' };
+    return { offer: mapOffer(data), error: null };
+  } catch { return { offer: null, error: 'unavailable' }; }
+}
