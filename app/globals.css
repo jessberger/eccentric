@@ -166,3 +166,8 @@
 .offer-dialog-header,.offer-dialog-footer{background:#f7fafc;border-color:#c3d3de}
 .offer-actions .inspect-button{background:#dcebf5;border-color:#aac8dc;color:#295772}
 .offer-actions .inspect-button:hover{background:#cbdfee;border-color:#739db8}
+
+/* Quiet rose tint for the most important offer values. */
+.offer-box dl>div.offer-field-highlight{background:#f0e1e3;border-bottom-color:#dec5ca;margin-inline:-10px;padding-inline:10px}
+.offer-box .offer-field-highlight dt{color:#72525b}
+.offer-box .offer-field-highlight dd{color:#412e35}

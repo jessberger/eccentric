@@ -19,16 +19,16 @@ export const offerGroups: OfferGroup[] = [
         "preview": true
       },
       {
+        "key": "last_modified",
+        "en": "Last modified",
+        "de": "Zuletzt geändert",
+        "preview": true
+      },
+      {
         "key": "offer_no",
         "en": "Offer no.",
         "de": "Angebotsnummer",
         "preview": true
-      },
-      {
-        "key": "last_modified",
-        "en": "Last modified",
-        "de": "Zuletzt geändert",
-        "preview": false
       },
       {
         "key": "sales_agent",
