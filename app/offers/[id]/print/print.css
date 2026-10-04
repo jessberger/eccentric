@@ -1,0 +1,44 @@
+.technical-print-page{color:#203440;font-family:Arial,Helvetica,sans-serif;background:#e8eef2;min-height:100vh;padding:24px 16px 48px}
+.technical-print-toolbar{max-width:210mm;margin:0 auto 18px;font-size:12px;color:#526878}
+.technical-print-toolbar>div{display:flex;gap:18px;align-items:center;margin-bottom:8px}
+.technical-print-toolbar button{border:1px solid #265d7b;border-radius:5px;padding:10px 16px;background:#265d7b;color:#fff;font-weight:600}
+.technical-print-toolbar a{color:#265d7b}
+.technical-sheet{max-width:210mm;margin:0 auto;background:#fff;padding:14mm 14mm 16mm;box-shadow:0 4px 24px #233f5118}
+.technical-letterhead{display:flex;justify-content:space-between;gap:10mm;align-items:flex-start;padding-bottom:6mm;border-bottom:0.5mm solid #32718f}
+.technical-company{font-size:9pt;line-height:1.55;min-width:0}
+.technical-company strong{font-size:11pt;color:#1e3f54}
+.technical-contact{margin-top:3mm}
+.technical-logo{width:44mm;height:auto;flex-shrink:0;margin-top:1mm}
+.technical-title{font-size:21pt;line-height:1.2;letter-spacing:-0.4pt;font-weight:600;margin:7mm 0 5mm;color:#1c425b}
+.technical-reference{margin:0 0 7mm;font-size:9.5pt;line-height:1.5}
+.technical-reference>div{display:grid;grid-template-columns:35mm minmax(0,1fr);gap:4mm;margin-bottom:1.5mm}
+.technical-reference dt{color:#526878}
+.technical-reference dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:600}
+.technical-section{margin:0 0 5mm}
+.technical-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt;line-height:1.45}
+.technical-table caption{text-align:left;font-size:10.5pt;font-weight:700;color:#24546e;background:#edf3f7;border-top:0.3mm solid #afc6d4;border-bottom:0.2mm solid #c9d8e1;padding:2mm 3mm;break-after:avoid}
+.technical-label-column{width:42%}
+.technical-table th,.technical-table td{padding:1.6mm 3mm;text-align:left;vertical-align:top;border-bottom:0.2mm solid #dce4e9;overflow-wrap:anywhere;white-space:pre-wrap}
+.technical-table th{font-weight:400;color:#516471}
+.technical-table td{color:#203440;font-weight:500}
+.technical-print-error{padding:32px;font:15px Arial,sans-serif}
+.technical-print-error a{display:inline-block;margin-top:16px}
+@page{size:A4;margin:14mm 12mm}
+@media print{
+  html,body{background:#fff!important;margin:0!important;padding:0!important}
+  .technical-print-page{background:#fff;min-height:0;padding:0;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .technical-print-toolbar{display:none!important}
+  .technical-sheet{max-width:none;margin:0;padding:0;box-shadow:none}
+  .technical-letterhead,.technical-reference{break-inside:avoid}
+  .technical-title{break-after:avoid}
+  .technical-table tr{break-inside:avoid;page-break-inside:avoid}
+  .technical-table caption{break-after:avoid;page-break-after:avoid}
+}
+@media screen and (max-width:600px){
+  .technical-sheet{padding:20px 16px}
+  .technical-letterhead{gap:12px}
+  .technical-logo{width:110px}
+  .technical-company{font-size:8pt}
+  .technical-title{font-size:18pt}
+  .technical-reference>div{grid-template-columns:105px minmax(0,1fr)}
+}

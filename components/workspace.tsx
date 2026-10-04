@@ -13,6 +13,7 @@ import { LanguageSwitch, useLanguage } from './language';
 import { MultiSelectFilter } from './multi-select-filter';
 import { EditOfferDialog } from './edit-offer-dialog';
 import { ReviseOfferDialog } from './revise-offer-dialog';
+import { PdfLanguageDialog } from './pdf-language-dialog';
 import { DeleteOfferDialog } from './delete-offer-dialog';
 
 const highlightedFields = new Set(['offer_date', 'last_modified', 'medium', 'flow_rate', 'pump_stator', 'drive_power']);
@@ -74,6 +75,7 @@ export function Workspace({ email }: { email: string }) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [printing, setPrinting] = useState<Offer | null>(null);
   const [opened, setOpened] = useState<Offer | null>(null);
   const [revising, setRevising] = useState<Offer | null>(null);
   const [deleting, setDeleting] = useState<Offer | null>(null);
@@ -87,7 +89,7 @@ export function Workspace({ email }: { email: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true); setError(null); setOffers([]); setOpened(null); setEditing(null); setRevising(null); setDeleting(null); setCopying(null); setNewOffer(false);
+    setLoading(true); setError(null); setOffers([]); setOpened(null); setPrinting(null); setEditing(null); setRevising(null); setDeleting(null); setCopying(null); setNewOffer(false);
     setProgress({ loaded: 0, total: 0 }); setPage(1);
     async function loadAll() {
       const collected: Offer[] = [];
@@ -170,7 +172,7 @@ export function Workspace({ email }: { email: string }) {
             </section>)}</div>
             <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button><button type="button" onClick={() => setEditing(offer)}>{t.edit}</button><button type="button" onClick={() => setRevising(offer)}>{t.revise}</button><button type="button" onClick={() => setCopying(offer)}>{t.copy}</button>
               <div className="offer-print-actions" role="group" aria-label={language === 'de' ? 'Drucken' : 'Print'}>
-                <button type="button" className="offer-print-button" disabled aria-label="Print PDF" title={language === 'de' ? 'PDF – wird im nächsten Schritt aktiviert' : 'PDF – available in the next step'}><Image src={pdfLogo} alt="" width={22} height={22} /><span>Print</span></button>
+                <button type="button" className="offer-print-button" onClick={() => setPrinting(offer)} aria-label="Print PDF" title="Print PDF"><Image src={pdfLogo} alt="" width={22} height={22} /><span>Print</span></button>
                 <button type="button" className="offer-print-button" disabled aria-label="Print Lexware" title={language === 'de' ? 'Lexware – wird später aktiviert' : 'Lexware – available later'}><Image src={lexwareLogo} alt="" width={22} height={22} /><span>Print</span></button>
               </div><button type="button" className="delete-offer-button" onClick={() => setDeleting(offer)}>{language === 'de' ? 'Löschen' : 'Delete'}</button></div>
           </article>)}
@@ -180,6 +182,7 @@ export function Workspace({ email }: { email: string }) {
       {!loading && !error && pageCount > 1 && <nav className="offer-pagination" aria-label={language === 'de' ? 'Seiten' : 'Pages'}><button type="button" className="outline-button" disabled={loading || currentPage === 1} onClick={() => setPage(Math.max(1, currentPage - 1))}>{t.previous}</button><span>{currentPage} / {pageCount}</span><button type="button" className="outline-button" disabled={loading || currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>{t.next}</button></nav>}
     </main>
     {deleting && <DeleteOfferDialog key={deleting.id} offer={deleting} onClose={() => setDeleting(null)} onDeleted={id => { setOffers(previous => previous.filter(offer => offer.id !== id)); setDeleting(null); }} />}
+    {printing && <PdfLanguageDialog offerId={printing.id} onClose={() => setPrinting(null)} />}
     {opened && <OfferDialog key={opened.id} offer={opened} onClose={() => setOpened(null)} />}
     {revising && <ReviseOfferDialog key={revising.id} offer={revising} onClose={() => setRevising(null)} onSaved={applySavedOffer} />}
     {newOffer && <EditOfferDialog key="new-offer" offer={emptyOffer} newOffer onClose={() => setNewOffer(false)} onSaved={applySavedOffer} />}
