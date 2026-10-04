@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import logo from '@/pics/logo.jpg';
+import pdfLogo from '@/pics/pdf.png';
+import lexwareLogo from '@/pics/lexware.png';
 import { signOut } from '@/app/actions';
 import { loadOfferBatch } from '@/app/offers/actions';
 import { offerFields, offerGroups } from '@/lib/offer-groups';
@@ -166,7 +168,11 @@ export function Workspace({ email }: { email: string }) {
               <h2>{item[language]}</h2>
               <dl>{item.fields.filter(field => field.preview).map(field => <div key={field.key} className={highlightedFields.has(field.key) ? 'offer-field-highlight' : undefined}><dt>{field[language]}</dt><dd>{offer.values[field.key] || '—'}</dd></div>)}</dl>
             </section>)}</div>
-            <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button><button type="button" onClick={() => setEditing(offer)}>{t.edit}</button><button type="button" onClick={() => setRevising(offer)}>{t.revise}</button><button type="button" onClick={() => setCopying(offer)}>{t.copy}</button><button type="button" className="delete-offer-button" onClick={() => setDeleting(offer)}>{language === 'de' ? 'Löschen' : 'Delete'}</button></div>
+            <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button><button type="button" onClick={() => setEditing(offer)}>{t.edit}</button><button type="button" onClick={() => setRevising(offer)}>{t.revise}</button><button type="button" onClick={() => setCopying(offer)}>{t.copy}</button>
+              <div className="offer-print-actions" role="group" aria-label={language === 'de' ? 'Drucken' : 'Print'}>
+                <button type="button" className="offer-print-button" disabled aria-label="Print PDF" title={language === 'de' ? 'PDF – wird im nächsten Schritt aktiviert' : 'PDF – available in the next step'}><Image src={pdfLogo} alt="" width={22} height={22} /><span>Print</span></button>
+                <button type="button" className="offer-print-button" disabled aria-label="Print Lexware" title={language === 'de' ? 'Lexware – wird später aktiviert' : 'Lexware – available later'}><Image src={lexwareLogo} alt="" width={22} height={22} /><span>Print</span></button>
+              </div><button type="button" className="delete-offer-button" onClick={() => setDeleting(offer)}>{language === 'de' ? 'Löschen' : 'Delete'}</button></div>
           </article>)}
           {filtered.length === 0 && <div className="offers-empty"><p>{query || activeFilters.length > 0 ? t.empty : t.noData}</p>{(query || activeFilters.length > 0) && <button type="button" className="outline-button" onClick={resetFilters}>{t.clear}</button>}</div>}
         </>}

@@ -171,3 +171,8 @@
 .offer-box dl>div.offer-field-highlight{background:#f0e1e3;border-bottom-color:#dec5ca;margin-inline:-10px;padding-inline:10px}
 .offer-box .offer-field-highlight dt{color:#72525b}
 .offer-box .offer-field-highlight dd{color:#412e35}
+
+.offer-print-actions{display:flex;flex-direction:column;gap:7px;margin-top:10px;margin-bottom:5px}
+.offer-actions .offer-print-button{display:flex;align-items:center;justify-content:center;gap:8px;background:#fff}
+.offer-print-button img{width:22px;height:22px;object-fit:contain;border-radius:3px}
+@media(max-width:700px){.offer-print-actions{flex-basis:100%;flex-direction:row}.offer-print-actions button{flex:1}}
