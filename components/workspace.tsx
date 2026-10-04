@@ -75,6 +75,7 @@ export function Workspace({ email }: { email: string }) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [printFormat, setPrintFormat] = useState<'pdf' | 'lexware'>('pdf');
   const [printing, setPrinting] = useState<Offer | null>(null);
   const [opened, setOpened] = useState<Offer | null>(null);
   const [revising, setRevising] = useState<Offer | null>(null);
@@ -172,8 +173,8 @@ export function Workspace({ email }: { email: string }) {
             </section>)}</div>
             <div className="offer-actions"><button type="button" className="inspect-button" onClick={() => setOpened(offer)}>{t.inspect}</button><button type="button" onClick={() => setEditing(offer)}>{t.edit}</button><button type="button" onClick={() => setRevising(offer)}>{t.revise}</button><button type="button" onClick={() => setCopying(offer)}>{t.copy}</button>
               <div className="offer-print-actions" role="group" aria-label={language === 'de' ? 'Drucken' : 'Print'}>
-                <button type="button" className="offer-print-button" onClick={() => setPrinting(offer)} aria-label="Print PDF" title="Print PDF"><Image src={pdfLogo} alt="" width={22} height={22} /><span>Print</span></button>
-                <button type="button" className="offer-print-button" disabled aria-label="Print Lexware" title={language === 'de' ? 'Lexware – wird später aktiviert' : 'Lexware – available later'}><Image src={lexwareLogo} alt="" width={22} height={22} /><span>Print</span></button>
+                <button type="button" className="offer-print-button" onClick={() => { setPrintFormat('pdf'); setPrinting(offer); }} aria-label="Print PDF" title="Print PDF"><Image src={pdfLogo} alt="" width={22} height={22} /><span>Print</span></button>
+                <button type="button" className="offer-print-button" onClick={() => { setPrintFormat('lexware'); setPrinting(offer); }} aria-label="Print Lexware" title="Lexware TXT"><Image src={lexwareLogo} alt="" width={22} height={22} /><span>Print</span></button>
               </div><button type="button" className="delete-offer-button" onClick={() => setDeleting(offer)}>{language === 'de' ? 'Löschen' : 'Delete'}</button></div>
           </article>)}
           {filtered.length === 0 && <div className="offers-empty"><p>{query || activeFilters.length > 0 ? t.empty : t.noData}</p>{(query || activeFilters.length > 0) && <button type="button" className="outline-button" onClick={resetFilters}>{t.clear}</button>}</div>}
@@ -182,7 +183,7 @@ export function Workspace({ email }: { email: string }) {
       {!loading && !error && pageCount > 1 && <nav className="offer-pagination" aria-label={language === 'de' ? 'Seiten' : 'Pages'}><button type="button" className="outline-button" disabled={loading || currentPage === 1} onClick={() => setPage(Math.max(1, currentPage - 1))}>{t.previous}</button><span>{currentPage} / {pageCount}</span><button type="button" className="outline-button" disabled={loading || currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>{t.next}</button></nav>}
     </main>
     {deleting && <DeleteOfferDialog key={deleting.id} offer={deleting} onClose={() => setDeleting(null)} onDeleted={id => { setOffers(previous => previous.filter(offer => offer.id !== id)); setDeleting(null); }} />}
-    {printing && <PdfLanguageDialog offerId={printing.id} onClose={() => setPrinting(null)} />}
+    {printing && <PdfLanguageDialog format={printFormat} offerId={printing.id} onClose={() => setPrinting(null)} />}
     {opened && <OfferDialog key={opened.id} offer={opened} onClose={() => setOpened(null)} />}
     {revising && <ReviseOfferDialog key={revising.id} offer={revising} onClose={() => setRevising(null)} onSaved={applySavedOffer} />}
     {newOffer && <EditOfferDialog key="new-offer" offer={emptyOffer} newOffer onClose={() => setNewOffer(false)} onSaved={applySavedOffer} />}
