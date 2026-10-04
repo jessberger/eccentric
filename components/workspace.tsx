@@ -15,6 +15,14 @@ import { DeleteOfferDialog } from './delete-offer-dialog';
 
 const highlightedFields = new Set(['offer_date', 'last_modified', 'medium', 'flow_rate', 'pump_stator', 'drive_power']);
 
+const offerNumberOrder = new Intl.Collator('en', { numeric: true });
+function compareOffers(a: Offer, b: Offer) {
+  // Database DATE values use YYYY-MM-DD, so text order matches date order.
+  const left = a.values.offer_date || a.values.last_modified || '';
+  const right = b.values.offer_date || b.values.last_modified || '';
+  return right.localeCompare(left) || offerNumberOrder.compare(b.values.offer_no || '', a.values.offer_no || '') || a.id.localeCompare(b.id);
+}
+
 const copy = {
   en: { search: 'Search offers…', filters: 'Filters', clear: 'Clear filters', all: 'Contains…', inspect: 'Inspect', edit: 'Edit', revise: 'Revise', copy: 'Copy', new: 'New offer', close: 'Close', count: 'offers', empty: 'No matching offers.', noData: 'No offers are available.', previous: 'Previous', next: 'Next', logout: 'Sign out', signoutError: 'Sign-out failed. Please try again.', refresh: 'Refresh', loading: 'Loading…', retry: 'Try again', login: 'Sign in', readOnly: 'Saving will be enabled in the next step.', errors: { auth: 'Your session has expired. Please sign in again.', configuration: 'The database connection is not configured.', schema: 'The offer table or its columns could not be found.', permission: 'Your account does not have permission to read these offers.', unavailable: 'Offers could not be loaded. Please try again.', invalid: 'Please shorten your search or filter text.' } },
   de: { search: 'Angebote suchen…', filters: 'Filter', clear: 'Filter zurücksetzen', all: 'Enthält…', inspect: 'Ansehen', edit: 'Bearbeiten', revise: 'Revidieren', copy: 'Kopieren', new: 'Neues Angebot', close: 'Schließen', count: 'Angebote', empty: 'Keine passenden Angebote.', noData: 'Keine Angebote verfügbar.', previous: 'Zurück', next: 'Weiter', logout: 'Abmelden', signoutError: 'Abmeldung fehlgeschlagen. Bitte erneut versuchen.', refresh: 'Aktualisieren', loading: 'Wird geladen…', retry: 'Erneut versuchen', login: 'Anmelden', readOnly: 'Speichern wird im nächsten Schritt aktiviert.', errors: { auth: 'Ihre Sitzung ist abgelaufen. Bitte erneut anmelden.', configuration: 'Die Datenbankverbindung ist nicht eingerichtet.', schema: 'Die Angebotstabelle oder ihre Spalten wurden nicht gefunden.', permission: 'Ihr Konto hat keine Leseberechtigung für diese Angebote.', unavailable: 'Angebote konnten nicht geladen werden. Bitte erneut versuchen.', invalid: 'Bitte kürzen Sie Ihren Such- oder Filtertext.' } },
@@ -97,11 +105,7 @@ export function Workspace({ email }: { email: string }) {
           setProgress({ loaded: collected.length, total: expected });
         } while (cursor);
         if (collected.length !== expected) throw new Error('Incomplete dataset');
-        const numberOrder = new Intl.Collator('en', { numeric: true });
-        collected.sort((a,b) => {
-          const left = a.values.offer_no || ''; const right = b.values.offer_no || '';
-          return numberOrder.compare(right, left) || a.id.localeCompare(b.id);
-        });
+        collected.sort(compareOffers);
         if (!cancelled) { setOffers(collected); setLoading(false); }
       } catch { if (!cancelled) { setError('unavailable'); setLoading(false); } }
     }
@@ -127,8 +131,7 @@ export function Workspace({ email }: { email: string }) {
   function applySavedOffer(saved: Offer) {
     setOffers(previous => {
       const updated = [...previous.filter(offer => offer.id !== saved.id), saved];
-      const order = new Intl.Collator('en', { numeric: true });
-      return updated.sort((a,b) => order.compare(b.values.offer_no || '', a.values.offer_no || '') || a.id.localeCompare(b.id));
+      return updated.sort(compareOffers);
     });
     setEditing(null);
     if (revising) { setRevising(null); setFilters({}); setQuery(saved.values.offer_no); setPage(1); }
