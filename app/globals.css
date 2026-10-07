@@ -257,6 +257,25 @@
 .media-options .is-selected strong{color:#005780}
 .media-options .is-selected small{color:#365d74}
 .media-options input:focus-visible+span{outline:3px solid #008bcc70;outline-offset:3px}
+.pump-selection-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.pump-selection-summary span{padding:6px 10px;background:#f7fafc;border:1px solid #c5d8e4;border-radius:5px;font-size:12px;color:#46677c}
+.pump-results-card{padding:20px}
+.pump-results-card h2{margin-bottom:16px}
+.pump-results-card h2 small{font-size:12px;color:#637c8e;font-weight:400}
+.pump-table-scroll{overflow-x:auto}
+.pump-results-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.pump-results-table th{padding:10px;background:#edf4f8;color:#47687d;font-size:11px;text-align:right;white-space:nowrap}
+.pump-results-table th:first-child,.pump-results-table td:first-child{text-align:left}
+.pump-results-table td{padding:10px;border-bottom:1px solid #e1eaf0;text-align:right;white-space:nowrap}
+.pump-results-table tr.is-selected td{background:#d4eaf6;border-bottom-color:#a6cbe0}
+.pump-result-choice{display:flex;gap:10px;align-items:center;cursor:pointer;min-height:24px}
+.pump-result-choice input{margin:0;accent-color:#0078b3;width:16px;height:16px}
+.pump-other-results{margin-top:20px}
+.pump-other-results summary{cursor:pointer;font-size:13px;color:#526f82;padding:8px 0}
+.pump-results-table .pump-reason{white-space:normal;text-align:left;min-width:170px;font-size:11px;color:#7b6a66}
+.pump-estimate-note{font-size:11px;line-height:1.5;color:#6a7d8b;margin-top:12px}
+.pump-no-match{font-size:13px;color:#637c8e;padding:10px 0}
+.pump-result-error{display:grid;justify-items:start;gap:12px}
 @media(max-width:1100px){.app-sidebar{flex-basis:204px}}
 @media(max-width:850px){.selector-media-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.app-sidebar nav{max-height:none;overflow:visible}.sidebar-pump-group{flex-basis:100%;order:1}.sidebar-steps{grid-template-columns:repeat(2,minmax(0,1fr));margin:2px 0 0 8px}.app-sidebar .sidebar-offers{border:0;margin:0;padding:8px;border-radius:6px}.selector-page-actions{flex-wrap:wrap}.selector-page-actions .form-error{flex-basis:100%}}

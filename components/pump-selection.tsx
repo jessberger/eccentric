@@ -13,13 +13,19 @@ export type Selection = {
   flowValue: string;
   abrasivity: MediaGroup;
   viscosity: MediaGroup;
+  selectedPumpCode: string;
 };
-const initial: Selection = { application: 'non-food', certification: 'non-atex', orientation: 'vertical', pressure: 6, flowUnit: 'lmin', flowValue: '', abrasivity: 0, viscosity: 0 };
+const initial: Selection = { application: 'non-food', certification: 'non-atex', orientation: 'vertical', pressure: 6, flowUnit: 'lmin', flowValue: '', abrasivity: 0, viscosity: 0, selectedPumpCode: '' };
 export const flowFactors: Record<FlowUnit, number> = { lmin: 1, lhour: 1 / 60, m3hour: 1000 / 60 };
 const Context = createContext<{ selection: Selection; setSelection: Dispatch<SetStateAction<Selection>>; ready: boolean; resetSelection: () => void } | null>(null);
 
 export function PumpSelectionProvider({ children }: { children: React.ReactNode }) {
-  const [selection, setSelection] = useState<Selection>(initial);
+  const [selection, update] = useState<Selection>(initial);
+  const setSelection: Dispatch<SetStateAction<Selection>> = value => update(previous => {
+    const next = typeof value === 'function' ? value(previous) : value;
+    const fields = ['application', 'certification', 'orientation', 'pressure', 'flowUnit', 'flowValue', 'abrasivity', 'viscosity'] as const;
+    return fields.some(key => next[key] !== previous[key]) ? { ...next, selectedPumpCode: '' } : next;
+  });
   // The root layout keeps this state across steps; a browser reload starts fresh.
   function resetSelection() { setSelection({ ...initial }); }
   return <Context.Provider value={{ selection, setSelection, ready: true, resetSelection }}>{children}</Context.Provider>;
