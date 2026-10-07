@@ -20,6 +20,10 @@ export function PumpResults() {
   const requestKey = JSON.stringify([flowLmin, pressure, orientation, abrasivity, viscosity]);
   const [result, setResult] = useState<{ key: string; response: PumpCalculationResponse } | null>(null);
   const [retry, setRetry] = useState(0);
+  const [validOnEntry] = useState(valid);
+  useEffect(() => {
+    if (!validOnEntry) router.replace('/select');
+  }, [validOnEntry, router]);
   useEffect(() => {
     if (!valid) return;
     let cancelled = false;
@@ -67,7 +71,7 @@ export function PumpResults() {
   };
   return <main className="pump-selector">
     <header className="selector-page-heading"><h1>Screw Pump</h1><p>{de ? 'Schritt 3 – Pumpenauswahl' : 'Step 3 – Pump selection'}</p></header>
-    {!valid ? <p className="form-note">{errorMessages.invalid} <Link href="/select">{de ? 'Zu Schritt 1' : 'Go to Step 1'}</Link></p> : <>
+    {!valid ? null : <>
       <PumpSelectionSummary requiredRpm={suitable.find(row => row.pumpCode === selection.selectedPumpCode)?.requiredRpm} />
       {!response ? <p role="status" className="form-note">{de ? 'Wird berechnet…' : 'Calculating…'}</p> : response.error ? <div className="pump-result-error"><p role="alert" className="form-error">{errorMessages[response.error]}</p>{response.error === 'auth' ? <Link href="/login" className="outline-button">{de ? 'Anmelden' : 'Sign in'}</Link> : <button type="button" className="outline-button" onClick={() => { setResult(null); setRetry(value => value + 1); }}>{de ? 'Erneut versuchen' : 'Try again'}</button>}</div> : <section className="selector-card pump-results-card">
         <h2><span>06</span>{de ? 'Pumpenauswahl' : 'Pump selection'} <small>{suitable.length} / {response.rows.length} {de ? 'geeignet' : 'suitable'}</small></h2>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { loadPumpFamilies } from '@/app/select/actions';
 import { isValidPumpInput } from '@/lib/pump-calculation';
@@ -13,6 +14,7 @@ export function PumpFamilies() {
   const { language } = useLanguage();
   const de = language === 'de';
   const { selection, setSelection } = usePumpSelection();
+  const router = useRouter();
   const { pressure, orientation, abrasivity, viscosity, application, certification, selectedPumpCode } = selection;
   const flowLmin = Number(selection.flowValue) * flowFactors[selection.flowUnit];
   const valid = !!selectedPumpCode && isValidPumpInput({ flowLmin, pressureBar: pressure, orientation, abrasivityGroup: abrasivity, viscosityGroup: viscosity });
@@ -20,6 +22,10 @@ export function PumpFamilies() {
   const [result, setResult] = useState<{ key: string; response: PumpFamilyResponse } | null>(null);
   const [retry, setRetry] = useState(0);
   const response = result?.key === requestKey ? result.response : null;
+  const [validOnEntry] = useState(valid);
+  useEffect(() => {
+    if (!validOnEntry) router.replace('/select');
+  }, [validOnEntry, router]);
   useEffect(() => {
     if (!valid) return;
     let cancelled = false;
@@ -43,7 +49,7 @@ export function PumpFamilies() {
   };
   return <main className="pump-selector">
     <header className="selector-page-heading"><h1>Screw Pump</h1><p>{de ? 'Schritt 4 – Pumpenfamilie' : 'Step 4 – Pump family'}</p></header>
-    {!valid ? <p className="form-note">{errors.invalid} <Link href="/select/pump">{de ? 'Zu Schritt 3' : 'Go to Step 3'}</Link></p> : <>
+    {!valid ? null : <>
       <PumpSelectionSummary requiredRpm={response?.requiredRpm} includeFamily />
       {!response ? <p role="status" className="form-note">{de ? 'Wird geladen…' : 'Loading…'}</p> : response.error ? <div className="pump-result-error"><p role="alert" className="form-error">{errors[response.error]}</p>{response.error === 'auth' ? <Link className="outline-button" href="/login">{de ? 'Anmelden' : 'Sign in'}</Link> : <button type="button" className="outline-button" onClick={() => { setResult(null); setRetry(value => value + 1); }}>{de ? 'Erneut versuchen' : 'Try again'}</button>}</div> : <section className="selector-card pump-results-card">
         <h2><span>07</span>{de ? 'Pumpenfamilie' : 'Pump family'}</h2>

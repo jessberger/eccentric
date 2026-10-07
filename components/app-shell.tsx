@@ -20,7 +20,7 @@ export function AppShell({ email, children }: { email: string; children: React.R
 
   return <div className="workspace app-shell">
     <header className="workspace-header">
-      <Link href="/" onNavigate={resetSelection} className="app-brand" aria-label={de ? 'Startseite' : 'Home'}><Image src={logo} alt="JESSBERGER" sizes="130px" priority /></Link>
+      <Link href="/" onClick={resetSelection} className="app-brand" aria-label={de ? 'Startseite' : 'Home'}><Image src={logo} alt="JESSBERGER" sizes="130px" priority /></Link>
       <div className="workspace-account"><LanguageSwitch /><span className="account-email">{email}</span>
         <button type="button" className="text-button" disabled={pending} onClick={() => {
           setFailed(false);
@@ -31,11 +31,11 @@ export function AppShell({ email, children }: { email: string; children: React.R
     </header>
     <div className="app-body">
       <aside className="app-sidebar"><nav aria-label="Navigation">
-        <Link href="/" onNavigate={resetSelection} prefetch={false} aria-current={pathname === '/' ? 'page' : undefined}>{de ? 'Startseite' : 'Home'}</Link>
-        <Link href="/hand-pump" onNavigate={resetSelection} prefetch={false} aria-current={pathname === '/hand-pump' ? 'page' : undefined}>Hand Pump</Link>
-        <Link href="/drum-pump" onNavigate={resetSelection} prefetch={false} aria-current={pathname === '/drum-pump' ? 'page' : undefined}>Drum Pump</Link>
+        <Link href="/" onClick={resetSelection} prefetch={false} aria-current={pathname === '/' ? 'page' : undefined}>{de ? 'Startseite' : 'Home'}</Link>
+        <Link href="/hand-pump" onClick={resetSelection} prefetch={false} aria-current={pathname === '/hand-pump' ? 'page' : undefined}>Hand Pump</Link>
+        <Link href="/drum-pump" onClick={resetSelection} prefetch={false} aria-current={pathname === '/drum-pump' ? 'page' : undefined}>Drum Pump</Link>
         <div className="sidebar-pump-group">
-          <Link href="/select" onNavigate={resetSelection} prefetch={false} className={screwActive ? 'sidebar-pump-active' : undefined}>Screw Pump</Link>
+          <Link href="/select" onClick={resetSelection} prefetch={false} className={screwActive ? 'sidebar-pump-active' : undefined}>Screw Pump</Link>
           {screwActive && <div className="sidebar-steps">
             <Link href="/select" prefetch={false} aria-current={pathname === '/select' ? 'page' : undefined}><span>{de ? 'Schritt 1' : 'Step 1'}</span><small>{de ? 'Ausführung / Fördermenge / Druck' : 'Type / Flow rate / Pressure'}</small></Link>
             <Link href="/select/media" prefetch={false} aria-current={pathname === '/select/media' ? 'page' : undefined}><span>{de ? 'Schritt 2' : 'Step 2'}</span><small>{de ? 'Viskosität / Abrasivität' : 'Viscosity / Abrasivity'}</small></Link>

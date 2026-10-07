@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLanguage } from './language';
 import { flowFactors, usePumpSelection, type MediaGroup } from './pump-selection';
 
@@ -26,7 +26,12 @@ export function PumpMedia() {
   const de = language === 'de';
   const { selection, setSelection, ready } = usePumpSelection();
   const router = useRouter();
-  const [error, setError] = useState<'flow' | 'media' | null>(null);
+  const [error, setError] = useState<'media' | null>(null);
+  const flow = Number(selection.flowValue) * flowFactors[selection.flowUnit];
+  const [validOnEntry] = useState(Number.isFinite(flow) && flow > 0);
+  useEffect(() => {
+    if (!validOnEntry) router.replace('/select');
+  }, [validOnEntry, router]);
   return <main className="pump-selector">
     <header className="selector-page-heading"><h1>Screw Pump</h1><p>{de ? 'Schritt 2 – Viskosität / Abrasivität' : 'Step 2 – Viscosity / Abrasivity'}</p></header>
     <div className="selector-media-grid">
@@ -41,10 +46,10 @@ export function PumpMedia() {
     </div>
     <div className="selector-page-actions">
       <Link className="outline-button" href="/select">← {de ? 'Zurück' : 'Back'}</Link>
-      {error && <p role="alert" className="form-error">{error === 'flow' ? (de ? 'Bitte zuerst die Fördermenge in Schritt 1 eingeben.' : 'Please enter a flow rate in Step 1 first.') : (de ? 'Bitte Abrasivität und Viskosität auswählen.' : 'Please select abrasivity and viscosity.')}</p>}
+      {error && <p role="alert" className="form-error">{de ? 'Bitte Abrasivität und Viskosität auswählen.' : 'Please select abrasivity and viscosity.'}</p>}
       <button type="button" className="solid-button" disabled={!ready} onClick={() => {
         const flow = Number(selection.flowValue) * flowFactors[selection.flowUnit];
-        if (!Number.isFinite(flow) || flow <= 0) { setError('flow'); return; }
+        if (!Number.isFinite(flow) || flow <= 0) { router.replace('/select'); return; }
         if (!selection.abrasivity || !selection.viscosity) { setError('media'); return; }
         router.push('/select/pump');
       }}>{de ? 'Weiter' : 'Next'} <span aria-hidden="true">→</span></button>
