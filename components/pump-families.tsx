@@ -7,6 +7,7 @@ import { isValidPumpInput } from '@/lib/pump-calculation';
 import type { PumpFamilyResponse } from '@/lib/pump-family';
 import { useLanguage } from './language';
 import { flowFactors, usePumpSelection } from './pump-selection';
+import { PumpSelectionSummary } from './pump-selection-summary';
 
 export function PumpFamilies() {
   const { language } = useLanguage();
@@ -31,7 +32,6 @@ export function PumpFamilies() {
     void load();
     return () => { cancelled = true; };
   }, [flowLmin, pressure, orientation, abrasivity, viscosity, application, certification, selectedPumpCode, requestKey, valid, retry]);
-  const format = (value: number) => value.toLocaleString(language, { maximumFractionDigits: 1 });
   const types: Record<string, string> = { standard: 'Standard', food: 'Food', atex: 'ATEX', atex_food: 'Food + ATEX' };
   const errors = {
     invalid: de ? 'Bitte eine passende Pumpe in Schritt 3 auswählen.' : 'Please select a suitable pump in Step 3.',
@@ -44,7 +44,7 @@ export function PumpFamilies() {
   return <main className="pump-selector">
     <header className="selector-page-heading"><h1>Screw Pump</h1><p>{de ? 'Schritt 4 – Pumpenfamilie' : 'Step 4 – Pump family'}</p></header>
     {!valid ? <p className="form-note">{errors.invalid} <Link href="/select/pump">{de ? 'Zu Schritt 3' : 'Go to Step 3'}</Link></p> : <>
-      <div className="pump-selection-summary"><span>{selectedPumpCode}</span><span>{application === 'food' ? 'Food' : (de ? 'Non-Food' : 'No Food')}</span><span>{certification === 'atex' ? 'ATEX' : (de ? 'Non-ATEX' : 'No ATEX')}</span><span>{orientation === 'vertical' ? (de ? 'Vertikal' : 'Vertical') : 'Horizontal'}</span><span>{format(flowLmin)} l/min</span><span>{pressure} bar</span>{response?.requiredRpm != null && <span>{format(response.requiredRpm)} RPM</span>}</div>
+      <PumpSelectionSummary requiredRpm={response?.requiredRpm} includeFamily />
       {!response ? <p role="status" className="form-note">{de ? 'Wird geladen…' : 'Loading…'}</p> : response.error ? <div className="pump-result-error"><p role="alert" className="form-error">{errors[response.error]}</p>{response.error === 'auth' ? <Link className="outline-button" href="/login">{de ? 'Anmelden' : 'Sign in'}</Link> : <button type="button" className="outline-button" onClick={() => { setResult(null); setRetry(value => value + 1); }}>{de ? 'Erneut versuchen' : 'Try again'}</button>}</div> : <section className="selector-card pump-results-card">
         <h2><span>07</span>{de ? 'Pumpenfamilie' : 'Pump family'}</h2>
         <div className="pump-table-scroll"><table className="pump-results-table pump-family-table"><thead><tr><th>{de ? 'Familie' : 'Family'}</th><th>{de ? 'Ausführung' : 'Type'}</th><th>{de ? 'Einbaulage' : 'Orientation'}</th><th>{de ? 'Eignung / Grund' : 'Suitability / Reason'}</th></tr></thead><tbody>

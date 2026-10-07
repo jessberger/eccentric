@@ -7,6 +7,7 @@ import { calculatePumps } from '@/app/select/actions';
 import { isValidPumpInput, type PumpCalculationResponse, type PumpResult } from '@/lib/pump-calculation';
 import { useLanguage } from './language';
 import { flowFactors, usePumpSelection } from './pump-selection';
+import { PumpSelectionSummary } from './pump-selection-summary';
 
 export function PumpResults() {
   const { language } = useLanguage();
@@ -43,10 +44,13 @@ export function PumpResults() {
     return reasons.join(' · ');
   }
   function table(rows: PumpResult[]) {
+    const compatible = rows.filter(row => row.compatible);
+    const incompatible = rows.filter(row => !row.compatible);
+    const ordered = [...compatible, ...incompatible];
     return <div className="pump-table-scroll"><table className="pump-results-table"><thead><tr>
       <th>{de ? 'Pumpe' : 'Pump'}</th><th>{de ? 'Erforderliche RPM' : 'Required RPM'}</th><th>RPM – Abr</th><th>RPM – Vis</th><th>{de ? 'Maximale RPM' : 'Maximum RPM'}</th>
       <th>{de ? 'Eignung / Grund' : 'Suitability / Reason'}</th>
-    </tr></thead><tbody>{rows.map(row => <tr key={row.pumpCode} className={`${row.compatible ? 'is-compatible' : 'is-incompatible'}${row.compatible && selection.selectedPumpCode === row.pumpCode ? ' is-selected' : ''}`}>
+    </tr></thead><tbody>{ordered.map((row, index) => <tr key={row.pumpCode} className={`${row.compatible ? 'is-compatible' : 'is-incompatible'}${incompatible.length && compatible.length && index === compatible.length ? ' pump-results-divider' : ''}${row.compatible && selection.selectedPumpCode === row.pumpCode ? ' is-selected' : ''}`}>
       <td><label className={`pump-result-choice${row.compatible ? '' : ' is-disabled'}`}><input type="radio" name="selected-pump" value={row.pumpCode} disabled={!row.compatible} checked={row.compatible && selection.selectedPumpCode === row.pumpCode} onChange={() => { if (row.compatible) setSelection(previous => ({ ...previous, selectedPumpCode: row.pumpCode })); }} /><strong>{row.pumpCode}</strong></label></td>
       <td>{format(row.requiredRpm)}</td><td>{format(row.abrasivityRpm)}</td><td>{format(row.viscosityRpm)}</td>
       <td>{format(row.maximumRpm)}</td><td className="pump-reason">{row.compatible ? (de ? 'Geeignet' : 'Suitable') : reason(row)}</td>
@@ -64,7 +68,7 @@ export function PumpResults() {
   return <main className="pump-selector">
     <header className="selector-page-heading"><h1>Screw Pump</h1><p>{de ? 'Schritt 3 – Pumpenauswahl' : 'Step 3 – Pump selection'}</p></header>
     {!valid ? <p className="form-note">{errorMessages.invalid} <Link href="/select">{de ? 'Zu Schritt 1' : 'Go to Step 1'}</Link></p> : <>
-      <div className="pump-selection-summary"><span>{selection.application === 'food' ? 'Food' : (de ? 'Non-Food' : 'No Food')}</span><span>{selection.certification === 'atex' ? 'ATEX' : (de ? 'Non-ATEX' : 'No ATEX')}</span><span>{orientation === 'vertical' ? (de ? 'Vertikal' : 'Vertical') : 'Horizontal'}</span><span>{format(flowLmin)} l/min</span><span>{pressure} bar</span><span>{de ? 'Gruppe' : 'Group'} Abr {abrasivity} / Vis {viscosity}</span></div>
+      <PumpSelectionSummary requiredRpm={suitable.find(row => row.pumpCode === selection.selectedPumpCode)?.requiredRpm} />
       {!response ? <p role="status" className="form-note">{de ? 'Wird berechnet…' : 'Calculating…'}</p> : response.error ? <div className="pump-result-error"><p role="alert" className="form-error">{errorMessages[response.error]}</p>{response.error === 'auth' ? <Link href="/login" className="outline-button">{de ? 'Anmelden' : 'Sign in'}</Link> : <button type="button" className="outline-button" onClick={() => { setResult(null); setRetry(value => value + 1); }}>{de ? 'Erneut versuchen' : 'Try again'}</button>}</div> : <section className="selector-card pump-results-card">
         <h2><span>06</span>{de ? 'Pumpenauswahl' : 'Pump selection'} <small>{suitable.length} / {response.rows.length} {de ? 'geeignet' : 'suitable'}</small></h2>
         {!suitable.length && <p className="pump-no-match">{de ? 'Keine passende Pumpe für diese Werte.' : 'No suitable pump for these values.'}</p>}
