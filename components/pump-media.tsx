@@ -26,13 +26,14 @@ export function PumpMedia() {
   return <main className="pump-selector">
     <header className="selector-page-heading"><h1>Screw Pump</h1><p>{de ? 'Schritt 2 – Viskosität / Abrasivität' : 'Step 2 – Viscosity / Abrasivity'}</p></header>
     <div className="selector-media-grid">
-      {(['abrasivity', 'viscosity'] as const).map(key => <fieldset key={key} className="selector-card media-choice-group" disabled={!ready}>
-        <legend>{key === 'abrasivity' ? (de ? 'Abrasivität' : 'Abrasivity') : (de ? 'Viskosität' : 'Viscosity')}</legend>
+      {(['abrasivity', 'viscosity'] as const).map(key => <section key={key} className="selector-card media-card" aria-labelledby={`${key}-title`}>
+        <h2 id={`${key}-title`}><span>{key === 'abrasivity' ? '04' : '05'}</span>{key === 'abrasivity' ? (de ? 'Abrasivität' : 'Abrasivity') : (de ? 'Viskosität' : 'Viscosity')}</h2>
+        <fieldset className="media-choice-group" aria-labelledby={`${key}-title`} disabled={!ready}>
         <div className="media-options">{groups[key].map((group, index) => <label key={index} className={selection[key] === index + 1 ? 'is-selected' : ''}>
           <input type="radio" name={key} checked={selection[key] === index + 1} onChange={() => setSelection(previous => ({ ...previous, [key]: (index + 1) as MediaGroup }))} />
           <span><strong>{de ? 'Gruppe' : 'Group'} {index + 1}: {group[language]}</strong><small>{de ? group.detailDe : group.detailEn}</small></span>
-        </label>)}</div>
-      </fieldset>)}
+        </label>)}</div></fieldset>
+      </section>)}
     </div>
     <div className="selector-page-actions"><Link className="outline-button" href="/select">← {de ? 'Zurück' : 'Back'}</Link></div>
   </main>;
