@@ -126,7 +126,7 @@ export const offerGroups: OfferGroup[] = [
         "key": "operation",
         "en": "Operation",
         "de": "Betriebsweise",
-        "preview": true
+        "preview": false
       },
       {
         "key": "pump_direction_of_rotation",
@@ -138,7 +138,7 @@ export const offerGroups: OfferGroup[] = [
         "key": "installation",
         "en": "Installation",
         "de": "Einbaulage",
-        "preview": false
+        "preview": true
       },
       {
         "key": "flow_rate",
