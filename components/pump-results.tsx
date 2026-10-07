@@ -46,7 +46,7 @@ export function PumpResults() {
       <th>{de ? 'Eignung / Grund' : 'Suitability / Reason'}</th>
     </tr></thead><tbody>{rows.map(row => <tr key={row.pumpCode} className={`${row.compatible ? 'is-compatible' : 'is-incompatible'}${row.compatible && selection.selectedPumpCode === row.pumpCode ? ' is-selected' : ''}`}>
       <td><label className={`pump-result-choice${row.compatible ? '' : ' is-disabled'}`}><input type="radio" name="selected-pump" value={row.pumpCode} disabled={!row.compatible} checked={row.compatible && selection.selectedPumpCode === row.pumpCode} onChange={() => { if (row.compatible) setSelection(previous => ({ ...previous, selectedPumpCode: row.pumpCode })); }} /><strong>{row.pumpCode}</strong></label></td>
-      <td>{format(row.requiredRpm)}</td><td>{format(row.abrasivityRpm)}{row.estimated && <span title={de ? 'Geschätzter Mediengrenzwert' : 'Estimated media limit'}> *</span>}</td><td>{format(row.viscosityRpm)}{row.estimated && <span> *</span>}</td>
+      <td>{format(row.requiredRpm)}</td><td>{format(row.abrasivityRpm)}</td><td>{format(row.viscosityRpm)}</td>
       <td>{format(row.maximumRpm)}</td><td className="pump-reason">{row.compatible ? (de ? 'Geeignet' : 'Suitable') : reason(row)}</td>
     </tr>)}</tbody></table></div>;
   }
@@ -62,12 +62,11 @@ export function PumpResults() {
   return <main className="pump-selector">
     <header className="selector-page-heading"><h1>Screw Pump</h1><p>{de ? 'Schritt 3 – Pumpenauswahl' : 'Step 3 – Pump selection'}</p></header>
     {!valid ? <p className="form-note">{errorMessages.invalid} <Link href="/select">{de ? 'Zu Schritt 1' : 'Go to Step 1'}</Link></p> : <>
-      <div className="pump-selection-summary"><span>{orientation === 'vertical' ? (de ? 'Vertikal' : 'Vertical') : 'Horizontal'}</span><span>{format(flowLmin)} l/min</span><span>{pressure} bar</span><span>{de ? 'Gruppe' : 'Group'} Abr {abrasivity} / Vis {viscosity}</span></div>
+      <div className="pump-selection-summary"><span>{selection.application === 'food' ? 'Food' : (de ? 'Non-Food' : 'No Food')}</span><span>{selection.certification === 'atex' ? 'ATEX' : (de ? 'Non-ATEX' : 'No ATEX')}</span><span>{orientation === 'vertical' ? (de ? 'Vertikal' : 'Vertical') : 'Horizontal'}</span><span>{format(flowLmin)} l/min</span><span>{pressure} bar</span><span>{de ? 'Gruppe' : 'Group'} Abr {abrasivity} / Vis {viscosity}</span></div>
       {!response ? <p role="status" className="form-note">{de ? 'Wird berechnet…' : 'Calculating…'}</p> : response.error ? <div className="pump-result-error"><p role="alert" className="form-error">{errorMessages[response.error]}</p>{response.error === 'auth' ? <Link href="/login" className="outline-button">{de ? 'Anmelden' : 'Sign in'}</Link> : <button type="button" className="outline-button" onClick={() => { setResult(null); setRetry(value => value + 1); }}>{de ? 'Erneut versuchen' : 'Try again'}</button>}</div> : <section className="selector-card pump-results-card">
         <h2><span>06</span>{de ? 'Pumpenauswahl' : 'Pump selection'} <small>{suitable.length} / {response.rows.length} {de ? 'geeignet' : 'suitable'}</small></h2>
         {!suitable.length && <p className="pump-no-match">{de ? 'Keine passende Pumpe für diese Werte.' : 'No suitable pump for these values.'}</p>}
         {table(response.rows)}
-        {response.rows.some(row => row.estimated) && <p className="pump-estimate-note">* {de ? 'Mediengrenzwerte für Section 1–14 sind geschätzt.' : 'Media limits for sections 1–14 are estimates.'}</p>}
       </section>}
     </>}
     <div className="selector-page-actions"><Link className="outline-button" href="/select/media">← {de ? 'Zurück' : 'Back'}</Link></div>
