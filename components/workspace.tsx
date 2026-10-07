@@ -1,15 +1,14 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import logo from '@/pics/logo.jpg';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import pdfLogo from '@/pics/pdf.png';
 import lexwareLogo from '@/pics/lexware.png';
-import { signOut } from '@/app/actions';
 import { loadOfferBatch } from '@/app/offers/actions';
 import { offerFields, offerGroups } from '@/lib/offer-groups';
 import { OFFER_PAGE_SIZE, type Offer, type OfferLoadError } from '@/lib/offers';
-import { LanguageSwitch, useLanguage } from './language';
+import { useLanguage } from './language';
+import { AppShell } from './app-shell';
 import { MultiSelectFilter } from './multi-select-filter';
 import { EditOfferDialog } from './edit-offer-dialog';
 import { ReviseOfferDialog } from './revise-offer-dialog';
@@ -66,8 +65,6 @@ function OfferDialog({ offer, onClose }: { offer: Offer; onClose: () => void }) 
 export function Workspace({ email }: { email: string }) {
   const { language } = useLanguage();
   const t = copy[language];
-  const [pending, startTransition] = useTransition();
-  const [failed, setFailed] = useState(false);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [error, setError] = useState<OfferLoadError | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,10 +143,8 @@ export function Workspace({ email }: { email: string }) {
     if (revising || copying || newOffer) { setNewOffer(false); setRevising(null); setCopying(null); setFilters({}); setQuery(saved.values.offer_no); setPage(1); }
   }
 
-  return <div className="workspace">
-    <header className="workspace-header"><Image src={logo} alt="JESSBERGER" sizes="130px" /><div className="workspace-account"><LanguageSwitch /><span className="account-email">{email}</span><button className="text-button" disabled={pending} onClick={() => { setFailed(false); startTransition(async () => { const response = await signOut(); setFailed(response.failed); }); }}>{pending ? '…' : t.logout}</button></div></header>
+  return <AppShell email={email}>
     <main className="offers-main">
-      {failed && <p role="alert" className="form-error">{t.signoutError}</p>}
       <div className="offers-toolbar">
         <label className="offer-search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><input type="search" disabled={loading || !!error} maxLength={100} value={query} placeholder={t.search} aria-label={t.search} onChange={event => { setQuery(event.target.value); setPage(1); }} /></label>
         <span className="offer-count" role="status">{loading ? `${t.loading} ${progress.loaded.toLocaleString(language)} / ${progress.total.toLocaleString(language)}` : error ? '—' : `${filtered.length.toLocaleString(language)} ${t.count}`}</span>
@@ -189,5 +184,5 @@ export function Workspace({ email }: { email: string }) {
     {newOffer && <EditOfferDialog key="new-offer" offer={emptyOffer} newOffer onClose={() => setNewOffer(false)} onSaved={applySavedOffer} />}
     {copying && <EditOfferDialog key={`copy-${copying.id}`} offer={copying} copy onClose={() => setCopying(null)} onSaved={applySavedOffer} />}
     {editing && <EditOfferDialog key={`${editing.id}-${editing.recordVersion}`} offer={editing} onClose={() => setEditing(null)} onSaved={applySavedOffer} />}
-  </div>;
+  </AppShell>;
 }

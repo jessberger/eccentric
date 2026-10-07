@@ -19,7 +19,7 @@ export async function signIn(_previous: LoginState, form: FormData): Promise<Log
       return { error: error.status && error.status >= 500 ? 'unavailable' : 'invalid' };
     }
   } catch { return { error: 'unavailable' }; }
-  redirect('/offers');
+  redirect('/');
 }
 
 export async function signOut(): Promise<{ failed: boolean }> {

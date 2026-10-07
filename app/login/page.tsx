@@ -8,6 +8,6 @@ export default async function LoginPage() {
   if (supabase) {
     try { const { data, error } = await supabase.auth.getUser(); authenticated = !error && !!data.user; } catch {}
   }
-  if (authenticated) redirect('/offers');
+  if (authenticated) redirect('/');
   return <LoginForm />;
 }
