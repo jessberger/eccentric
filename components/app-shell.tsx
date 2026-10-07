@@ -40,6 +40,7 @@ export function AppShell({ email, children }: { email: string; children: React.R
             <Link href="/select" prefetch={false} aria-current={pathname === '/select' ? 'page' : undefined}><span>{de ? 'Schritt 1' : 'Step 1'}</span><small>{de ? 'Ausführung / Fördermenge / Druck' : 'Type / Flow rate / Pressure'}</small></Link>
             <Link href="/select/media" prefetch={false} aria-current={pathname === '/select/media' ? 'page' : undefined}><span>{de ? 'Schritt 2' : 'Step 2'}</span><small>{de ? 'Viskosität / Abrasivität' : 'Viscosity / Abrasivity'}</small></Link>
             <Link href="/select/pump" prefetch={false} aria-current={pathname === '/select/pump' ? 'page' : undefined}><span>{de ? 'Schritt 3' : 'Step 3'}</span><small>{de ? 'Pumpenauswahl' : 'Pump selection'}</small></Link>
+            <Link href="/select/family" prefetch={false} aria-current={pathname === '/select/family' ? 'page' : undefined}><span>{de ? 'Schritt 4' : 'Step 4'}</span><small>{de ? 'Pumpenfamilie' : 'Pump family'}</small></Link>
           </div>}
         </div>
         <Link href="/offers" className="sidebar-offers" prefetch={false} aria-current={pathname === '/offers' ? 'page' : undefined}>{de ? 'Bestehende Angebote' : 'View existing offers'}</Link>

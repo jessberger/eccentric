@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { calculatePumps } from '@/app/select/actions';
 import { isValidPumpInput, type PumpCalculationResponse, type PumpResult } from '@/lib/pump-calculation';
@@ -11,6 +12,7 @@ export function PumpResults() {
   const { language } = useLanguage();
   const de = language === 'de';
   const { selection, setSelection } = usePumpSelection();
+  const router = useRouter();
   const flowLmin = Number(selection.flowValue) * flowFactors[selection.flowUnit];
   const { pressure, orientation, abrasivity, viscosity } = selection;
   const valid = isValidPumpInput({ flowLmin, pressureBar: pressure, orientation, abrasivityGroup: abrasivity, viscosityGroup: viscosity });
@@ -69,6 +71,6 @@ export function PumpResults() {
         {table(response.rows)}
       </section>}
     </>}
-    <div className="selector-page-actions"><Link className="outline-button" href="/select/media">← {de ? 'Zurück' : 'Back'}</Link></div>
+    <div className="selector-page-actions"><Link className="outline-button" href="/select/media">← {de ? 'Zurück' : 'Back'}</Link><button type="button" className="solid-button" disabled={!valid || !suitable.some(row => row.pumpCode === selection.selectedPumpCode)} onClick={() => router.push('/select/family')}>{de ? 'Weiter' : 'Next'} <span aria-hidden="true">→</span></button></div>
   </main>;
 }

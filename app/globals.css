@@ -279,6 +279,7 @@
 .pump-results-table .pump-reason{white-space:nowrap;text-align:left;min-width:170px;font-size:11px}
 .pump-no-match{font-size:13px;color:#637c8e;padding:10px 0}
 .pump-result-error{display:grid;justify-items:start;gap:12px}
+.pump-family-table th,.pump-family-table td{text-align:left}
 @media(max-width:1100px){.app-sidebar{flex-basis:204px}}
 @media(max-width:850px){.selector-media-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.app-sidebar nav{max-height:none;overflow:visible}.sidebar-pump-group{flex-basis:100%;order:1}.sidebar-steps{grid-template-columns:repeat(2,minmax(0,1fr));margin:2px 0 0 8px}.app-sidebar .sidebar-offers{border:0;margin:0;padding:8px;border-radius:6px}.selector-page-actions{flex-wrap:wrap}.selector-page-actions .form-error{flex-basis:100%}}
