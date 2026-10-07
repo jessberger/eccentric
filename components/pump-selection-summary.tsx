@@ -16,7 +16,7 @@ export function PumpSelectionSummary({ requiredRpm, includeFamily = false, inclu
   ];
   if (selection.abrasivity) items.push({ number: '04', value: `${de ? 'Abrasivität' : 'Abrasivity'} ${selection.abrasivity}` });
   if (selection.viscosity) items.push({ number: '05', value: `${de ? 'Viskosität' : 'Viscosity'} ${selection.viscosity}` });
-  if (selection.selectedPumpCode) items.push({ number: '06', value: `${selection.selectedPumpCode}${requiredRpm != null ? ` | ${format(requiredRpm)} RPM` : ''}` });
+  if (selection.selectedPumpCode) items.push({ number: '06', value: `${selection.selectedPumpCode}${requiredRpm != null ? ` | ${requiredRpm.toLocaleString(language, { maximumFractionDigits: 0 })} RPM` : ''}` });
   if (includeFamily && selection.selectedFamily) items.push({ number: '07', value: selection.selectedFamily });
   if (includeModel && selection.selectedModel) items.push({ number: '08', value: selection.selectedModel });
   return <div className="pump-selection-summary" role="group" aria-label={de ? 'Gewählte Werte' : 'Selected values'}>

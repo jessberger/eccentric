@@ -1,7 +1,7 @@
 'use server';
 
 import { supabaseServer } from '@/lib/supabase';
-import { isValidPumpInput, type PumpCalculationInput, type PumpCalculationResponse, type PumpResult } from '@/lib/pump-calculation';
+import { isValidPumpInput, isRpmWithinLimits, type PumpCalculationInput, type PumpCalculationResponse, type PumpResult } from '@/lib/pump-calculation';
 import { familyMatches, type PumpFamilyInput, type PumpFamilyResponse } from '@/lib/pump-family';
 import type { PumpModelInput, PumpModelResponse } from '@/lib/pump-model';
 
@@ -55,15 +55,16 @@ export async function calculatePumps(input: PumpCalculationInput): Promise<PumpC
     const rows: PumpResult[] = data.map((row: Record<string, unknown>) => {
       const requiredRpm = numeric(row.required_rpm);
       const maximumRpm = numeric(row.maximum_rpm);
+      const minimumRpm = numeric(row.minimum_rpm) ?? 100;
       const hasData = row.has_data === true && requiredRpm !== null && maximumRpm !== null;
       return {
         pumpCode: String(row.pump_code), requiredRpm,
         abrasivityRpm: numeric(row.rpm_abrasivity), viscosityRpm: numeric(row.rpm_viscosity),
         mediaMaximumRpm: numeric(row.media_maximum_rpm), pumpMaximumRpm: numeric(row.pump_maximum_rpm),
-        maximumRpm, maximumSource: typeof row.maximum_source === 'string' ? row.maximum_source : null,
+        maximumRpm, minimumRpm, maximumSource: typeof row.maximum_source === 'string' ? row.maximum_source : null,
         maximumPercent: numeric(row.maximum_percent),
         stageMatches: row.stage_matches === true, orientationMatches: row.orientation_matches === true, hasData,
-        compatible: row.is_compatible === true && hasData && requiredRpm! > 0 && requiredRpm! <= maximumRpm!,
+        compatible: row.is_compatible === true && hasData && isRpmWithinLimits(requiredRpm, maximumRpm, minimumRpm),
         estimated: row.media_is_estimated === true,
       };
     });
@@ -97,7 +98,7 @@ export async function loadPumpFamilies(input: PumpFamilyInput): Promise<PumpFami
     }
     const pump = Array.isArray(calculation.data) ? calculation.data.find(row => row.pump_code === input.pumpCode && row.is_compatible === true) : null;
     const requiredRpm = pump ? numeric(pump.required_rpm) : null;
-    if (!pump || requiredRpm === null || requiredRpm <= 0) return fail('invalid');
+    if (!pump || !isRpmWithinLimits(requiredRpm, numeric(pump.maximum_rpm), numeric(pump.minimum_rpm) ?? 100)) return fail('invalid');
     if (!families.data?.length) return fail('schema');
     const rows = families.data.map(row => {
       const family = { family: String(row.pump_family), applicationType: String(row.application_type), vertical: row.supports_vertical === true, horizontal: row.supports_horizontal === true };

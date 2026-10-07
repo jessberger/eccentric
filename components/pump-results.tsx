@@ -38,12 +38,13 @@ export function PumpResults() {
   }, [flowLmin, pressure, orientation, abrasivity, viscosity, valid, requestKey, retry]);
   const response = result?.key === requestKey ? result.response : null;
   const suitable = response?.rows.filter(row => row.compatible) || [];
-  const format = (value: number | null) => value === null ? '—' : value.toLocaleString(language, { maximumFractionDigits: 1 });
+  const format = (value: number | null) => value === null ? '—' : value.toLocaleString(language, { maximumFractionDigits: 0 });
   function reason(row: PumpResult) {
     const reasons: string[] = [];
     if (!row.stageMatches) reasons.push(de ? 'Andere Druckstufe' : 'Different pressure stage');
     if (!row.orientationMatches) reasons.push(de ? 'Andere Einbaulage' : 'Different orientation');
     if (!row.hasData) reasons.push(de ? 'Daten fehlen' : 'Missing data');
+    if (row.hasData && row.requiredRpm! < row.minimumRpm) reasons.push(de ? `Drehzahl unter ${format(row.minimumRpm)} RPM` : `Required RPM below ${format(row.minimumRpm)}`);
     if (row.hasData && row.requiredRpm! > row.maximumRpm!) reasons.push(de ? 'Drehzahl zu hoch' : 'Required RPM too high');
     return reasons.join(' · ');
   }

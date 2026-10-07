@@ -10,19 +10,21 @@ import { useLanguage } from './language';
 import { flowFactors, usePumpSelection } from './pump-selection';
 import { PumpSelectionSummary } from './pump-selection-summary';
 
-export function PumpModels() {
+export function PumpModels({ completed = false }: { completed?: boolean }) {
   const { language } = useLanguage();
   const de = language === 'de';
   const { selection, setSelection } = usePumpSelection();
   const router = useRouter();
   const { pressure, orientation, abrasivity, viscosity, application, certification, selectedPumpCode, selectedFamily } = selection;
   const flowLmin = Number(selection.flowValue) * flowFactors[selection.flowUnit];
-  const valid = !!selectedPumpCode && !!selectedFamily && isValidPumpInput({ flowLmin, pressureBar: pressure, orientation, abrasivityGroup: abrasivity, viscosityGroup: viscosity });
+  const valid = !!selectedPumpCode && !!selectedFamily && (!completed || !!selection.selectedModel) && isValidPumpInput({ flowLmin, pressureBar: pressure, orientation, abrasivityGroup: abrasivity, viscosityGroup: viscosity });
   const requestKey = JSON.stringify([flowLmin, pressure, orientation, abrasivity, viscosity, application, certification, selectedPumpCode, selectedFamily]);
   const [validOnEntry] = useState(valid);
   const [result, setResult] = useState<{ key: string; response: PumpModelResponse } | null>(null);
   const [retry, setRetry] = useState(0);
   const response = result?.key === requestKey ? result.response : null;
+  const selectedModel = response?.rows.find(row => row.model === selection.selectedModel);
+  const pumpName = `${selectedFamily}${selectedPumpCode} ${selection.selectedModel.split(' - ')[0]}`;
   useEffect(() => {
     if (!validOnEntry) router.replace('/select');
   }, [validOnEntry, router]);
@@ -47,10 +49,10 @@ export function PumpModels() {
     unavailable: de ? 'Modelle konnten nicht geladen werden.' : 'Models could not be loaded.',
   };
   return <main className="pump-selector">
-    <header className="selector-page-heading"><h1>Screw Pump</h1><p>{de ? 'Schritt 5 – Modell' : 'Step 5 – Model'}</p></header>
+    <header className="selector-page-heading"><h1>{completed ? pumpName : 'Screw Pump'}</h1><p>{completed ? (de ? 'Pumpenauswahl abgeschlossen' : 'Pump selection complete') : (de ? 'Schritt 5 – Modell' : 'Step 5 – Model')}</p></header>
     {valid && <>
       <PumpSelectionSummary requiredRpm={response?.requiredRpm} includeFamily includeModel />
-      {!response ? <p role="status" className="form-note">{de ? 'Wird geladen…' : 'Loading…'}</p> : response.error ? <div className="pump-result-error"><p role="alert" className="form-error">{errors[response.error]}</p>{response.error === 'auth' ? <Link className="outline-button" href="/login">{de ? 'Anmelden' : 'Sign in'}</Link> : <button type="button" className="outline-button" onClick={() => { setResult(null); setRetry(value => value + 1); }}>{de ? 'Erneut versuchen' : 'Try again'}</button>}</div> : <section className="selector-card pump-results-card">
+      {!response ? <p role="status" className="form-note">{de ? 'Wird geladen…' : 'Loading…'}</p> : response.error || (completed && !selectedModel) ? <div className="pump-result-error"><p role="alert" className="form-error">{errors[response.error ?? 'invalid']}</p>{response.error === 'auth' ? <Link className="outline-button" href="/login">{de ? 'Anmelden' : 'Sign in'}</Link> : <button type="button" className="outline-button" onClick={() => { setResult(null); setRetry(value => value + 1); }}>{de ? 'Erneut versuchen' : 'Try again'}</button>}</div> : completed ? null : <section className="selector-card pump-results-card">
         <h2><span>08</span>{de ? 'Modell' : 'Model'}</h2>
         <div className="pump-table-scroll"><table className="pump-results-table"><thead><tr><th>{de ? 'Modell' : 'Model'}</th><th>Phase</th><th>{de ? 'Drehzahl (RPM)' : 'Rotation (RPM)'}</th></tr></thead><tbody>
           {response.rows.map(row => <tr key={row.model} className={`is-compatible${selection.selectedModel === row.model ? ' is-selected' : ''}`}>
@@ -60,6 +62,6 @@ export function PumpModels() {
         </tbody></table></div>
       </section>}
     </>}
-    <div className="selector-page-actions"><Link className="outline-button" href="/select/family">← {de ? 'Zurück' : 'Back'}</Link></div>
+    <div className="selector-page-actions"><Link className="outline-button" href={completed ? '/select/model' : '/select/family'}>← {de ? 'Zurück' : 'Back'}</Link>{!completed && valid && !response?.error && selectedModel && <button type="button" className="solid-button" onClick={() => router.push('/select/summary')}>{de ? 'Weiter' : 'Next'} <span aria-hidden="true">→</span></button>}</div>
   </main>;
 }

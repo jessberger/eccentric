@@ -14,6 +14,7 @@ export type PumpResult = {
   mediaMaximumRpm: number | null;
   pumpMaximumRpm: number | null;
   maximumRpm: number | null;
+  minimumRpm: number;
   maximumSource: string | null;
   maximumPercent: number | null;
   stageMatches: boolean;
@@ -25,6 +26,11 @@ export type PumpResult = {
 
 export type PumpCalculationError = 'invalid' | 'auth' | 'configuration' | 'schema' | 'permission' | 'unavailable';
 export type PumpCalculationResponse = { rows: PumpResult[]; error: PumpCalculationError | null };
+
+export function isRpmWithinLimits(required: number | null, maximum: number | null, minimum = 100): boolean {
+  return required !== null && maximum !== null && Number.isFinite(required) && Number.isFinite(maximum)
+    && Number.isFinite(minimum) && minimum > 0 && required >= minimum && required <= maximum;
+}
 
 export function isValidPumpInput(input: PumpCalculationInput): boolean {
   return !!input && typeof input === 'object'
