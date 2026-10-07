@@ -13,8 +13,8 @@ export function PumpLanding() {
   return <main className="pump-landing">
     <h1>{de ? 'Pumpenauswahl' : 'Pump selection'}</h1>
     <div className="pump-category-grid">
-      <button type="button" className="pump-category" disabled><Image src={handPump} alt="" sizes="(max-width: 760px) 80vw, 28vw" /><span>Hand Pump</span></button>
-      <button type="button" className="pump-category" disabled><Image src={drumPump} alt="" sizes="(max-width: 760px) 80vw, 28vw" /><span>Drum Pump</span></button>
+      <Link href="/hand-pump" className="pump-category pump-category-active"><Image src={handPump} alt="" sizes="(max-width: 760px) 80vw, 28vw" /><span>Hand Pump <b aria-hidden="true">→</b></span></Link>
+      <Link href="/drum-pump" className="pump-category pump-category-active"><Image src={drumPump} alt="" sizes="(max-width: 760px) 80vw, 28vw" /><span>Drum Pump <b aria-hidden="true">→</b></span></Link>
       <Link href="/select" className="pump-category pump-category-active"><Image src={screwPump} alt="" sizes="(max-width: 760px) 80vw, 28vw" /><span>Eccentric Screw Pump <b aria-hidden="true">→</b></span></Link>
     </div>
   </main>;

@@ -7,6 +7,7 @@ import { useState, useTransition } from 'react';
 import logo from '@/pics/logo.jpg';
 import { signOut } from '@/app/actions';
 import { LanguageSwitch, useLanguage } from './language';
+import { PumpSelectionProvider } from './pump-selection';
 
 export function AppShell({ email, children }: { email: string; children: React.ReactNode }) {
   const { language } = useLanguage();
@@ -14,13 +15,9 @@ export function AppShell({ email, children }: { email: string; children: React.R
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
-  const links = [
-    { href: '/', label: de ? 'Startseite' : 'Home' },
-    { href: '/select', label: de ? 'Neues Angebot' : 'Start an offer' },
-    { href: '/offers', label: de ? 'Bestehende Angebote' : 'View existing offers' },
-  ];
+  const screwActive = pathname === '/select' || pathname.startsWith('/select/');
 
-  return <div className="workspace app-shell">
+  return <PumpSelectionProvider><div className="workspace app-shell">
     <header className="workspace-header">
       <Link href="/" className="app-brand" aria-label={de ? 'Startseite' : 'Home'}><Image src={logo} alt="JESSBERGER" sizes="130px" priority /></Link>
       <div className="workspace-account"><LanguageSwitch /><span className="account-email">{email}</span>
@@ -32,12 +29,22 @@ export function AppShell({ email, children }: { email: string; children: React.R
     </header>
     <div className="app-body">
       <aside className="app-sidebar"><nav aria-label="Navigation">
-        {links.map(link => <Link key={link.href} href={link.href} prefetch={false} aria-current={pathname === link.href ? 'page' : undefined}>{link.label}</Link>)}
+        <Link href="/" prefetch={false} aria-current={pathname === '/' ? 'page' : undefined}>{de ? 'Startseite' : 'Home'}</Link>
+        <Link href="/hand-pump" prefetch={false} aria-current={pathname === '/hand-pump' ? 'page' : undefined}>Hand Pump</Link>
+        <Link href="/drum-pump" prefetch={false} aria-current={pathname === '/drum-pump' ? 'page' : undefined}>Drum Pump</Link>
+        <div className="sidebar-pump-group">
+          <Link href="/select" prefetch={false} className={screwActive ? 'sidebar-pump-active' : undefined}>Screw Pump</Link>
+          {screwActive && <div className="sidebar-steps">
+            <Link href="/select" prefetch={false} aria-current={pathname === '/select' ? 'page' : undefined}><span>{de ? 'Schritt 1' : 'Step 1'}</span><small>{de ? 'Ausführung / Fördermenge / Druck' : 'Type / Flow rate / Pressure'}</small></Link>
+            <Link href="/select/media" prefetch={false} aria-current={pathname === '/select/media' ? 'page' : undefined}><span>{de ? 'Schritt 2' : 'Step 2'}</span><small>{de ? 'Viskosität / Abrasivität' : 'Viscosity / Abrasivity'}</small></Link>
+          </div>}
+        </div>
+        <Link href="/offers" className="sidebar-offers" prefetch={false} aria-current={pathname === '/offers' ? 'page' : undefined}>{de ? 'Bestehende Angebote' : 'View existing offers'}</Link>
       </nav></aside>
       <div className="app-content">
         {failed && <p role="alert" className="form-error app-signout-error">{de ? 'Abmeldung fehlgeschlagen. Bitte erneut versuchen.' : 'Sign-out failed. Please try again.'}</p>}
         {children}
       </div>
     </div>
-  </div>;
+  </div></PumpSelectionProvider>;
 }
