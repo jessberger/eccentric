@@ -260,6 +260,7 @@
 .pump-selection-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 .pump-selection-summary span{padding:6px 10px;background:#f7fafc;border:1px solid #c5d8e4;border-radius:5px;font-size:12px;color:#46677c}
 .pump-selection-summary b{display:inline-block;margin-right:8px;font-size:10px;color:#758c9c;font-weight:700}
+.selected-pump-name{margin:24px 0 28px;text-align:center;font-size:clamp(26px,3vw,38px);line-height:1.25;font-weight:700;overflow-wrap:anywhere}
 .pump-results-card{padding:20px}
 .pump-results-card h2{margin-bottom:16px}
 .pump-results-card h2 small{font-size:12px;color:#637c8e;font-weight:400}

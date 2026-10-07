@@ -49,9 +49,10 @@ export function PumpModels({ completed = false }: { completed?: boolean }) {
     unavailable: de ? 'Modelle konnten nicht geladen werden.' : 'Models could not be loaded.',
   };
   return <main className="pump-selector">
-    <header className="selector-page-heading"><h1>{completed ? pumpName : 'Screw Pump'}</h1><p>{completed ? (de ? 'Pumpenauswahl abgeschlossen' : 'Pump selection complete') : (de ? 'Schritt 5 – Modell' : 'Step 5 – Model')}</p></header>
+    <header className="selector-page-heading"><h1>Screw Pump</h1><p>{completed ? (de ? 'Pumpenauswahl abgeschlossen' : 'Pump selection complete') : (de ? 'Schritt 5 – Modell' : 'Step 5 – Model')}</p></header>
     {valid && <>
       <PumpSelectionSummary requiredRpm={response?.requiredRpm} includeFamily includeModel />
+      {completed && <h2 className="selected-pump-name">{pumpName}</h2>}
       {!response ? <p role="status" className="form-note">{de ? 'Wird geladen…' : 'Loading…'}</p> : response.error || (completed && !selectedModel) ? <div className="pump-result-error"><p role="alert" className="form-error">{errors[response.error ?? 'invalid']}</p>{response.error === 'auth' ? <Link className="outline-button" href="/login">{de ? 'Anmelden' : 'Sign in'}</Link> : <button type="button" className="outline-button" onClick={() => { setResult(null); setRetry(value => value + 1); }}>{de ? 'Erneut versuchen' : 'Try again'}</button>}</div> : completed ? null : <section className="selector-card pump-results-card">
         <h2><span>08</span>{de ? 'Modell' : 'Model'}</h2>
         <div className="pump-table-scroll"><table className="pump-results-table"><thead><tr><th>{de ? 'Modell' : 'Model'}</th><th>Phase</th><th>{de ? 'Drehzahl (RPM)' : 'Rotation (RPM)'}</th></tr></thead><tbody>
