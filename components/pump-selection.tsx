@@ -15,8 +15,9 @@ export type Selection = {
   viscosity: MediaGroup;
   selectedPumpCode: string;
   selectedFamily: string;
+  selectedModel: string;
 };
-const initial: Selection = { application: 'non-food', certification: 'non-atex', orientation: 'vertical', pressure: 6, flowUnit: 'lmin', flowValue: '', abrasivity: 0, viscosity: 0, selectedPumpCode: '', selectedFamily: '' };
+const initial: Selection = { application: 'non-food', certification: 'non-atex', orientation: 'vertical', pressure: 6, flowUnit: 'lmin', flowValue: '', abrasivity: 0, viscosity: 0, selectedPumpCode: '', selectedFamily: '', selectedModel: '' };
 export const flowFactors: Record<FlowUnit, number> = { lmin: 1, lhour: 1 / 60, m3hour: 1000 / 60 };
 const Context = createContext<{ selection: Selection; setSelection: Dispatch<SetStateAction<Selection>>; ready: boolean; resetSelection: () => void } | null>(null);
 
@@ -25,8 +26,9 @@ export function PumpSelectionProvider({ children }: { children: React.ReactNode 
   const setSelection: Dispatch<SetStateAction<Selection>> = value => update(previous => {
     const next = typeof value === 'function' ? value(previous) : value;
     const fields = ['application', 'certification', 'orientation', 'pressure', 'flowUnit', 'flowValue', 'abrasivity', 'viscosity'] as const;
-    if (fields.some(key => next[key] !== previous[key])) return { ...next, selectedPumpCode: '', selectedFamily: '' };
-    return next.selectedPumpCode !== previous.selectedPumpCode ? { ...next, selectedFamily: '' } : next;
+    if (fields.some(key => next[key] !== previous[key])) return { ...next, selectedPumpCode: '', selectedFamily: '', selectedModel: '' };
+    if (next.selectedPumpCode !== previous.selectedPumpCode) return { ...next, selectedFamily: '', selectedModel: '' };
+    return next.selectedFamily !== previous.selectedFamily ? { ...next, selectedModel: '' } : next;
   });
   // The root layout keeps this state across steps; a browser reload starts fresh.
   function resetSelection() { setSelection({ ...initial }); }

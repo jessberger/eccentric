@@ -62,6 +62,6 @@ export function PumpFamilies() {
         </tbody></table></div>
       </section>}
     </>}
-    <div className="selector-page-actions"><Link className="outline-button" href="/select/pump">← {de ? 'Zurück' : 'Back'}</Link></div>
+    <div className="selector-page-actions"><Link className="outline-button" href="/select/pump">← {de ? 'Zurück' : 'Back'}</Link><button type="button" className="solid-button" disabled={!valid || !response?.rows.some(row => row.family === selection.selectedFamily && row.compatible)} onClick={() => router.push('/select/model')}>{de ? 'Weiter' : 'Next'} <span aria-hidden="true">→</span></button></div>
   </main>;
 }

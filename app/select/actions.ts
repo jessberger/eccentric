@@ -3,11 +3,33 @@
 import { supabaseServer } from '@/lib/supabase';
 import { isValidPumpInput, type PumpCalculationInput, type PumpCalculationResponse, type PumpResult } from '@/lib/pump-calculation';
 import { familyMatches, type PumpFamilyInput, type PumpFamilyResponse } from '@/lib/pump-family';
+import type { PumpModelInput, PumpModelResponse } from '@/lib/pump-model';
 
 function numeric(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+export async function loadPumpModels(input: PumpModelInput): Promise<PumpModelResponse> {
+  const fail = (error: PumpModelResponse['error']): PumpModelResponse => ({ rows: [], requiredRpm: null, error });
+  if (typeof input.family !== 'string' || !input.family || input.family.length > 100) return fail('invalid');
+  const families = await loadPumpFamilies(input);
+  if (families.error) return fail(families.error);
+  if (!families.rows.some(row => row.family === input.family && row.compatible)) return fail('invalid');
+  try {
+    const supabase = await supabaseServer();
+    if (!supabase) return fail('configuration');
+    const { data, error } = await supabase.from('pump_selection_drives').select('pump_model, phase, rotation').order('sort_order').abortSignal(AbortSignal.timeout(20000));
+    if (error) {
+      if (['42P01', '42703', 'PGRST204', 'PGRST205'].includes(error.code)) return fail('schema');
+      if (error.code === '42501') return fail('permission');
+      if (['PGRST301', 'PGRST303'].includes(error.code)) return fail('auth');
+      return fail('unavailable');
+    }
+    if (!data?.length) return fail('schema');
+    return { rows: data.map(row => ({ model: String(row.pump_model), phase: String(row.phase), rotation: String(row.rotation) })), requiredRpm: families.requiredRpm, error: null };
+  } catch { return fail('unavailable'); }
 }
 
 export async function calculatePumps(input: PumpCalculationInput): Promise<PumpCalculationResponse> {
