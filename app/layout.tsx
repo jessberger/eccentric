@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { LanguageProvider } from '@/components/language';
+import { PumpSelectionProvider } from '@/components/pump-selection';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,5 +12,5 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const language = (await cookies()).get('language')?.value === 'en' ? 'en' : 'de';
-  return <html lang={language}><body><LanguageProvider initial={language}>{children}</LanguageProvider></body></html>;
+  return <html lang={language}><body><LanguageProvider initial={language}><PumpSelectionProvider>{children}</PumpSelectionProvider></LanguageProvider></body></html>;
 }
